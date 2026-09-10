@@ -1,0 +1,94 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vote</title>
+<link rel="stylesheet" href="/style.css">
+
+<div class="wrap">
+  <h1 id="title">Loading…</h1>
+  <p class="muted" id="rule"></p>
+  <div class="grid" id="grid"></div>
+
+  <div class="sticky row" style="justify-content:space-between">
+    <span id="counter" class="muted"></span>
+    <button id="submit" disabled>Submit vote</button>
+  </div>
+  <p id="msg" class="err"></p>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let need = 1, picked = new Set(), deviceId = '';
+
+const store = {
+  get: () => { try { return localStorage.getItem('vdid') || ''; } catch { return ''; } },
+  set: v => { try { localStorage.setItem('vdid', v); } catch {} }
+};
+
+const done = (icon, head, sub) => {
+  document.body.innerHTML =
+    `<div class="wrap" style="text-align:center;padding-top:90px">
+       <div style="font-size:64px">${icon}</div>
+       <h1>${head}</h1>
+       <p class="muted">${sub}</p>
+     </div>`;
+};
+
+async function load() {
+  const r = await fetch('/api/poll?did=' + encodeURIComponent(store.get()));
+  const { settings, candidates, deviceId: did, alreadyVoted } = await r.json();
+  deviceId = did;
+  if (did && !store.get()) store.set(did);
+  need = settings.votesPerVoter;
+  $('#title').textContent = settings.title;
+
+  if (alreadyVoted) return done('🔒', 'Already voted', 'This device has already submitted a ballot.');
+
+  if (!settings.open) {
+    $('#rule').innerHTML = '<b class="err">Voting is currently closed.</b>';
+    $('#submit').remove();
+    return;
+  }
+  $('#rule').textContent = `Select exactly ${need} ${need === 1 ? 'choice' : 'choices'}, then submit.`;
+
+  $('#grid').innerHTML = '';
+  candidates.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'cand pick';
+    el.innerHTML = (c.photo ? `<img src="${c.photo}" alt="">` : `<div class="ph">👤</div>`) +
+                   `<div class="body"><b></b></div>`;
+    el.querySelector('b').textContent = c.name;
+    el.onclick = () => {
+      if (picked.has(c.id)) picked.delete(c.id);
+      else if (picked.size >= need) return flash(`You can only pick ${need}. Tap a selected one to remove it.`);
+      else picked.add(c.id);
+      el.classList.toggle('sel', picked.has(c.id));
+      sync();
+    };
+    $('#grid').append(el);
+  });
+  sync();
+}
+
+function sync() {
+  $('#counter').textContent = `${picked.size} of ${need} selected`;
+  $('#submit').disabled = picked.size !== need;
+}
+const flash = m => { $('#msg').textContent = m; setTimeout(() => $('#msg').textContent = '', 2200); };
+
+$('#submit').onclick = async () => {
+  $('#submit').disabled = true;
+  const r = await fetch('/api/vote', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ choices: [...picked], deviceId: store.get() || deviceId })
+  });
+  const d = await r.json();
+  if (r.status === 409) return done('🔒', 'Already voted', d.error);
+  if (!r.ok) { flash(d.error); $('#submit').disabled = false; return; }
+  store.set(store.get() || deviceId);
+  done('✅', 'Thank you!', 'Your vote has been recorded.');
+};
+
+load();
+</script>
