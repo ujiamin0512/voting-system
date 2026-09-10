@@ -12,17 +12,22 @@
 
 <script>
 const $ = s => document.querySelector(s);
-const token = localStorage.getItem('vtoken') || '';
 
 async function tick() {
-  const r = await fetch('/api/admin/state', { headers: { Authorization: 'Bearer ' + token } });
-  if (!r.ok) { $('#board').innerHTML = '<p class="err">Log in on the admin page first, then reopen this window.</p>'; return; }
+  const r = await fetch('/api/results');
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    $('#board').innerHTML = `<p class="err">${d.error || 'Could not load results.'}</p>`;
+    return;
+  }
   const s = await r.json();
   const list = [...s.candidates].sort((a, b) => b.votes - a.votes);
   const max = Math.max(1, ...list.map(c => c.votes));
   const total = list.reduce((n, c) => n + c.votes, 0);
 
-  $('#sub').textContent = `${s.ballotCount} ballot(s) · ${total} vote(s) cast · voting ${s.settings.open ? 'OPEN' : 'CLOSED'}`;
+  document.title = s.title + ' — Results';
+  $('h1').textContent = '🏆 ' + s.title;
+  $('#sub').textContent = `${s.ballotCount} ballot(s) · ${total} vote(s) cast · voting ${s.open ? 'OPEN' : 'CLOSED'}`;
   $('#board').innerHTML = list.map((c, i) => `
     <div class="card" style="margin-bottom:10px">
       <div class="row" style="flex-wrap:nowrap;gap:14px">

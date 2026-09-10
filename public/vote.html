@@ -98,7 +98,8 @@ $('#submit').onclick = async () => {
   if (r.status === 409) return done('🔒', 'Already voted', d.error);
   if (!r.ok) { flash(d.error); $('#submit').disabled = false; return; }
   store.set(store.get() || deviceId);
-  done('✅', 'Thank you!', 'Your vote has been recorded.');
+  done('✅', 'Thank you!',
+    'Your vote has been recorded.<br><a href="/results" style="color:var(--accent)">See the live results →</a>');
 };
 
 load();
