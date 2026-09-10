@@ -75,6 +75,13 @@ Every `git push` to `main` redeploys automatically.
 - **Clear device locks** — lets everyone vote again without touching the tally.
 - **Reset all votes** — zeroes every candidate, clears ballots and device locks.
 
+## Stale tabs
+
+Every API response carries the running build id. A tab left open across a deploy notices the
+mismatch and handles it per page: the scoreboard reloads itself silently, the vote page
+reloads only while no selection is in progress, and the admin panel shows a "newer version"
+banner with a Reload button rather than interrupting an edit.
+
 ## Voting rules
 
 The submit button stays disabled until exactly `votesPerVoter` candidates are selected; the

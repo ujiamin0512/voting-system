@@ -18,6 +18,12 @@
 
   <!-- PANEL -->
   <section id="panel" hidden>
+    <div id="newBuild" hidden style="background:#0f2b1a;border:1px solid #22c55e;color:#9df5c0;padding:12px 14px;border-radius:10px;margin-bottom:16px">
+      <div class="row" style="justify-content:space-between">
+        <span><b>↻ A newer version of this app is live.</b> Reload to use it.</span>
+        <button onclick="buildWatch.reload()">Reload now</button>
+      </div>
+    </div>
     <div id="dbWarn" hidden style="background:#3a0f12;border:1px solid #7f1d1d;color:#ffc9c9;padding:12px 14px;border-radius:10px;margin-bottom:16px">
       <b>⚠ No database connected.</b>
       <div id="dbWarnText" style="margin-top:4px"></div>
@@ -85,10 +91,11 @@
   <h2 style="margin-top:0">Scan to vote</h2>
   <div id="qr" style="background:#fff;padding:14px;border-radius:10px;display:grid;place-items:center;min-height:240px"></div>
   <p class="muted" id="qrUrl" style="word-break:break-all"></p>
-  <p class="muted">Participants must be on the same Wi-Fi / network.</p>
+  <p class="muted" id="qrNote"></p>
   <button class="ghost" onclick="qrDlg.close()">Close</button>
 </dialog>
 
+<script src="/version.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -123,6 +130,8 @@ async function show() {
 // --- load state ---
 async function load() {
   const s = await api('/api/admin/state');
+  // The admin may be mid-edit, so this offers a reload instead of forcing one.
+  if (buildWatch.changed(s.build)) $('#newBuild').hidden = false;
   voteUrl = s.voteUrl;
   $('#sTitle').value = s.settings.title;
   $('#sVotes').value = s.settings.votesPerVoter;
@@ -238,10 +247,23 @@ $('#prevTab').onclick = () => window.open(PREVIEW_URL, '_blank');
 $('#qrBtn').onclick = () => {
   $('#qr').innerHTML = '';
   $('#qrUrl').textContent = voteUrl;
+  // A public https link works from any network; a LAN address does not.
+  $('#qrNote').textContent = /^https:/.test(voteUrl)
+    ? 'Works on any network, including mobile data.'
+    : 'Local address — participants must be on the same Wi-Fi. For a public link, open this admin page on your deployed site instead.';
   if (window.QRCode) new QRCode($('#qr'), { text: voteUrl, width: 240, height: 240 });
   else $('#qr').innerHTML = '<span style="color:#333">QR library offline — share the link below.</span>';
   qrDlg.showModal();
 };
+
+// load() only runs after an action, so a quiet admin tab would not notice a deploy.
+// /api/results is small and public, which makes it a cheap heartbeat.
+setInterval(() => {
+  fetch('/api/results', { cache: 'no-store' })
+    .then(r => r.json())
+    .then(d => { if (buildWatch.changed(d.build)) $('#newBuild').hidden = false; })
+    .catch(() => {});
+}, 30000);
 
 if (token) show();
 </script>

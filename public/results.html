@@ -15,6 +15,7 @@
   <div id="board"></div>
 </div>
 
+<script src="/version.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 
@@ -31,6 +32,8 @@ async function tick(withPhotos = false) {
     const r = await fetch('/api/results' + (withPhotos ? '?photos=1' : ''), { cache: 'no-store' });
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Could not load results.');
     s = await r.json();
+    // A projector board is unattended, so it refreshes itself without asking.
+    if (buildWatch.changed(s.build)) return buildWatch.reload();
     $('#dot').textContent = '● live';
     $('#dot').style.color = 'var(--accent-2)';
   } catch (e) {

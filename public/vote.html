@@ -16,6 +16,7 @@
   <p id="msg" class="err"></p>
 </div>
 
+<script src="/version.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 let need = 1, picked = new Set(), deviceId = '';
@@ -39,7 +40,11 @@ const done = (icon, head, sub) => {
 
 async function load() {
   const r = await fetch('/api/poll?did=' + encodeURIComponent(store.get()));
-  const { settings, candidates, deviceId: did, alreadyVoted } = await r.json();
+  const data = await r.json();
+  // Reload only when the voter has not started choosing, so a refresh never
+  // discards selections they are part-way through making.
+  if (buildWatch.changed(data.build) && !picked.size) return buildWatch.reload();
+  const { settings, candidates, deviceId: did, alreadyVoted } = data;
   deviceId = did;
   if (did && !store.get()) store.set(did);
   need = settings.votesPerVoter;
@@ -103,4 +108,15 @@ $('#submit').onclick = async () => {
 };
 
 load();
+
+// A phone left on this page for hours would keep running the build it loaded with.
+// Re-check whenever the voter comes back to the tab.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && !picked.size && !PREVIEW) {
+    fetch('/api/poll?did=' + encodeURIComponent(store.get()), { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => { if (buildWatch.changed(d.build)) buildWatch.reload(); })
+      .catch(() => {});
+  }
+});
 </script>
