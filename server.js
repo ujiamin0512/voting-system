@@ -50,7 +50,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === '/results') return serveStatic(res, '/results.html');
     serveStatic(res, url.pathname);
   } catch (e) {
-    send(res, 400, { error: e.message });
+    send(res, e.statusCode || 400, { error: e.message });
   }
 }).listen(PORT, () => {
   console.log(`\n  Voting system running  (storage: ${store.kind})`);

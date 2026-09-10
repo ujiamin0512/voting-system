@@ -18,6 +18,10 @@
 
   <!-- PANEL -->
   <section id="panel" hidden>
+    <div id="dbWarn" hidden style="background:#3a0f12;border:1px solid #7f1d1d;color:#ffc9c9;padding:12px 14px;border-radius:10px;margin-bottom:16px">
+      <b>⚠ No database connected.</b>
+      <div id="dbWarnText" style="margin-top:4px"></div>
+    </div>
     <div class="row" style="justify-content:space-between">
       <div>
         <h1>Voting Admin</h1>
@@ -126,6 +130,14 @@ async function load() {
   $('#sLock').checked = s.settings.oneVotePerDevice;
   $('#count').textContent = `(${s.candidates.length})`;
   $('#stat').textContent = `${s.ballotCount} ballot(s) submitted · ${s.lockedDevices} device lock(s) · voting ${s.settings.open ? 'OPEN' : 'CLOSED'} · storage: ${s.storage}`;
+  const noDb = s.storage === 'none';
+  $('#dbWarn').hidden = !noDb;
+  if (noDb) {
+    $('#dbWarnText').innerHTML =
+      'Vercel cannot save data to files, so nothing can be added until a database is connected.<br>' +
+      '<b>Storage → Create Database → Neon → Connect</b>, then <b>Deployments → Redeploy</b>. ' +
+      'Diagnostics: <a href="/api/health" target="_blank" style="color:#ffc9c9">/api/health</a>';
+  }
   $('#rows').innerHTML = '';
   s.candidates.forEach(c => $('#rows').append(rowFor(c)));
 }

@@ -9,6 +9,6 @@ module.exports = async (req, res) => {
     await handleApi(req, res, url);
   } catch (e) {
     console.error(e);
-    if (!res.headersSent) send(res, 500, { error: e.message || 'Server error' });
+    if (!res.headersSent) send(res, e.statusCode || 500, { error: e.message || 'Server error' });
   }
 };

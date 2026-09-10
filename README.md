@@ -29,6 +29,16 @@ The backend is chosen automatically:
 The admin status line shows which one is live. Vercel's filesystem is ephemeral, so a
 database is **required** there — without one, votes disappear between requests.
 
+## Troubleshooting the deployment
+
+Open `/api/health` on the deployed site. It reports which backend is live and which
+environment variables were found (names only, never values).
+
+- `"storage":"none"` — no database is connected; the admin panel shows a red banner and
+  writes fail with instructions instead of a confusing `EROFS: read-only file system`.
+  Connect Neon in the Storage tab, then **redeploy** — env vars only apply to new builds.
+- `"storage":"postgres"` — connected and working.
+
 ## Deploy to Vercel
 
 1. Push this repo to GitHub (already wired to `ujiamin0512/voting-system`).
