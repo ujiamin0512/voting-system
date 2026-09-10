@@ -19,6 +19,9 @@
 <script>
 const $ = s => document.querySelector(s);
 let need = 1, picked = new Set(), deviceId = '';
+// Preview mode: admin-only rehearsal of the ballot. Nothing is recorded and the
+// device is never locked, so the admin can look without spending their own vote.
+const PREVIEW = new URLSearchParams(location.search).has('preview');
 
 const store = {
   get: () => { try { return localStorage.getItem('vdid') || ''; } catch { return ''; } },
@@ -42,9 +45,16 @@ async function load() {
   need = settings.votesPerVoter;
   $('#title').textContent = settings.title;
 
-  if (alreadyVoted) return done('🔒', 'Already voted', 'This device has already submitted a ballot.');
+  if (PREVIEW) {
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="background:#3b2f00;color:#ffd76e;padding:8px 16px;text-align:center;font-weight:600">
+         👁 Preview — nothing you do here is recorded${settings.open ? '' : ' (voting is currently CLOSED for real voters)'}
+       </div>`);
+  } else {
+    if (alreadyVoted) return done('🔒', 'Already voted', 'This device has already submitted a ballot.');
+  }
 
-  if (!settings.open) {
+  if (!settings.open && !PREVIEW) {
     $('#rule').innerHTML = '<b class="err">Voting is currently closed.</b>';
     $('#submit').remove();
     return;
@@ -78,6 +88,7 @@ const flash = m => { $('#msg').textContent = m; setTimeout(() => $('#msg').textC
 
 $('#submit').onclick = async () => {
   $('#submit').disabled = true;
+  if (PREVIEW) return done('👁', 'Preview only', 'A real voter would be recorded here. Nothing was saved.');
   const r = await fetch('/api/vote', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

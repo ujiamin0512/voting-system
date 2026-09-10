@@ -56,6 +56,7 @@ Every `git push` to `main` redeploys automatically.
 
 - **Poll settings** — title, how many votes each participant must cast, open/close voting.
 - **Candidates (full CRUD)** — add with name + photo, edit name/photo/vote count, delete.
+- **Preview vote page** — see the ballot exactly as voters do, in a phone-sized frame; selections there are never recorded and never lock your device.
 - **Show QR code** — participants scan it to land straight on the voting page.
 - **Live results** — auto-refreshing scoreboard with ranks, bars and percentages.
 - **One vote per device** — on by default; toggle off for kiosk/shared-tablet voting.
