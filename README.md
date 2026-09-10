@@ -75,6 +75,13 @@ Every `git push` to `main` redeploys automatically.
 - **Clear device locks** — lets everyone vote again without touching the tally.
 - **Reset all votes** — zeroes every candidate, clears ballots and device locks.
 
+## Tests
+
+With the server running, `npm test` exercises login, candidate CRUD, the exact-count rule
+and device locking against it. The device-lock cases send the id as BOTH a cookie and a
+JSON field, the way a browser does — testing with curl alone once hid a bug where that
+looked like a repeat vote and every browser ballot was rolled back.
+
 ## Stale tabs
 
 Every API response carries the running build id. A tab left open across a deploy notices the

@@ -7,10 +7,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "reset": "node -e \"require('fs').rmSync('data.json',{force:true});console.log('data.json cleared')\""
+    "reset": "node -e \"require('fs').rmSync('data.json',{force:true});console.log('data.json cleared')\"",
+    "test": "node test.js"
   },
   "dependencies": {
     "pg": "^8.13.1"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }
