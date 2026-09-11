@@ -47,7 +47,7 @@ http.createServer(async (req, res) => {
   try {
     if (url.pathname.startsWith('/api/')) return await handleApi(req, res, url);
     if (url.pathname === '/vote') return serveStatic(res, '/vote.html');
-    if (url.pathname === '/results') return serveStatic(res, '/results.html');
+    if (url.pathname === '/projector' || url.pathname === '/results') return serveStatic(res, '/projector.html');
     serveStatic(res, url.pathname);
   } catch (e) {
     send(res, e.statusCode || 400, { error: e.message });

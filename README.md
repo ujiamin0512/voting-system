@@ -12,7 +12,7 @@ npm start
 
 - Admin: http://localhost:3000/ — password `admin123`
 - Voting: http://localhost:3000/vote
-- Results: http://localhost:3000/results — public, no login needed
+- Projector: http://localhost:3000/projector — public, no login needed (`/results` still works)
 
 In VS Code press **F5** instead, and pick a launch configuration. `npm run dev` restarts on
 save; `npm run reset` deletes the local `data.json`.
@@ -68,9 +68,10 @@ Every `git push` to `main` redeploys automatically.
 - **Candidates (full CRUD)** — add with name + photo, edit name/photo/vote count, delete.
 - **Preview vote page** — see the ballot exactly as voters do, in a phone-sized frame; selections there are never recorded and never lock your device.
 - **Show QR code** — participants scan it to land straight on the voting page.
-- **Live results** — auto-refreshing scoreboard with ranks, bars and percentages. The page is
-  public: share the `/results` link or put it on a projector. Voters also get a link to it
-  after submitting. Only the tallies are exposed — admin routes still require the password.
+- **Projector** — a full-screen slideshow for the big screen: one slide per candidate (photo
+  above, name below), then a live side-by-side scoreboard ranked left to right. Auto-advances,
+  with ← → space F keyboard controls and a Fullscreen button. Public, no login. Voters get a
+  link to it after submitting. Only the tallies are exposed — admin routes still need the password.
 - **One vote per device** — on by default; toggle off for kiosk/shared-tablet voting.
 - **Clear device locks** — lets everyone vote again without touching the tally.
 - **Reset all votes** — zeroes every candidate, clears ballots and device locks.

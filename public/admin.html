@@ -36,7 +36,7 @@
       <div class="row">
         <button class="ghost" id="previewBtn">Preview vote page</button>
         <button class="ghost" id="qrBtn">Show QR code</button>
-        <button class="ghost" id="resBtn">Live results</button>
+        <button class="ghost" id="resBtn">Projector</button>
         <button class="ghost" id="outBtn">Log out</button>
       </div>
     </div>
@@ -237,7 +237,7 @@ $('#unlockBtn').onclick = async () => {
   load();
 };
 
-$('#resBtn').onclick = () => window.open('/results', '_blank');
+$('#resBtn').onclick = () => window.open('/projector', '_blank');
 
 const PREVIEW_URL = '/vote?preview=1';
 $('#previewBtn').onclick = () => { $('#prevFrame').src = PREVIEW_URL; prevDlg.showModal(); };
