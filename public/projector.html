@@ -45,10 +45,6 @@
   .lane .pct   { color: var(--muted); font-size: clamp(13px, 2vh, 20px); }
   .lane .medal { font-size: clamp(22px, 4.5vh, 48px); height: 1.2em; margin-bottom: 2.2vh; }
 
-  /* --- countdown to the next slide --- */
-  .progress { position: fixed; top: 0; left: 0; right: 0; height: 4px; background: #14171f; z-index: 5; }
-  .progress > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s linear; }
-  body.paused .progress > i { background: #facc15; }
   .lane .track { width: 100%; height: 1.6vh; background: #14171f; border-radius: 99px; overflow: hidden; }
   .lane .track > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .6s ease; }
   .lane.lead .pic { outline: 4px solid #facc15; outline-offset: 4px; }
@@ -69,16 +65,14 @@
   .kbd b { font-weight: 600; color: var(--text); }
 </style>
 
-<div class="progress"><i id="bar"></i></div>
 <div class="stage" id="stage"></div>
 
 <div class="hud">
   <div class="row" style="gap:10px">
     <button class="ghost" id="prev">◀</button>
-    <button class="ghost" id="pause">⏸ Pause</button>
     <button class="ghost" id="next">▶</button>
     <button class="ghost" id="full">Fullscreen</button>
-    <span class="kbd">keys: <b>←</b> <b>→</b> <b>space</b> <b>F</b></span>
+    <span class="kbd">keys: <b>←</b> <b>→</b> <b>Home</b> <b>End</b> <b>F</b></span>
   </div>
   <div class="dots" id="dots"></div>
   <span id="dot">●</span>
@@ -89,15 +83,12 @@
 const $ = s => document.querySelector(s);
 
 const POLL_MS       = 1200;   // scoreboard refresh
-const SLIDE_MS      = 6000;   // time on each candidate
-const BOARD_MS      = 15000;  // time on the scoreboard before looping
 
 // Photos are large base64 strings; fetched once and kept here.
 const photos = new Map();
 let data = null;          // latest /api/results
 let order = [];           // candidate ids in slide order (creation order, stable)
 let current = 0;          // slide index; order.length === scoreboard slide
-let paused = false;
 let lastBoardPaint = '';
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -162,7 +153,7 @@ function buildSlides() {
   lastBoardPaint = '';
   paintBoard();
   if (current > order.length) current = order.length;
-  show(current, false);
+  show(current);
 }
 
 function paintBoard() {
@@ -192,52 +183,30 @@ function paintBoard() {
 }
 
 // ---------------------------------------------------------------- navigation
-function show(i, restart = true) {
+function show(i) {
   const slides = document.querySelectorAll('.slide');
   if (!slides.length) return;
   current = (i + slides.length) % slides.length;
   slides.forEach((s, k) => s.classList.toggle('on', k === current));
   document.querySelectorAll('#dots i').forEach((d, k) => d.classList.toggle('on', k === current));
-  if (restart) schedule();
 }
 const next = () => show(current + 1);
 const prev = () => show(current - 1);
 
-// Auto-advance runs off a heartbeat rather than a chain of setTimeouts: a single
-// missed callback (throttled background tab, a rebuild mid-transition) would have
-// stopped the chain for good, leaving the show stuck until someone pressed a key.
-let slideStart = 0;
-const slideLength = () => (current === order.length ? BOARD_MS : SLIDE_MS);
-
-function schedule() {
-  slideStart = Date.now();
-}
-
-setInterval(() => {
-  if (!order.length) return;
-  const elapsed = Date.now() - slideStart;
-  const len = slideLength();
-  $('#bar').style.width = Math.min(100, elapsed / len * 100) + '%';
-  if (!paused && elapsed >= len) next();
-}, 200);
-
-function setPaused(p) {
-  paused = p;
-  document.body.classList.toggle('paused', paused);
-  $('#pause').textContent = paused ? '▶ Play' : '⏸ Pause';
-  if (!paused) schedule();
-}
-
 $('#next').onclick = next;
 $('#prev').onclick = prev;
-$('#pause').onclick = () => setPaused(!paused);
+// Tap or click the slide itself: right two-thirds goes forward, left third goes back,
+// so it works from a touchscreen or a mouse without hunting for the small buttons.
+$('#stage').addEventListener('click', e => {
+  (e.clientX < window.innerWidth / 3 ? prev : next)();
+});
 $('#full').onclick = () => document.fullscreenElement
   ? document.exitFullscreen() : document.documentElement.requestFullscreen();
 
 document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight' || e.key === 'PageDown') next();
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp') prev();
-  else if (e.key === ' ') { e.preventDefault(); setPaused(!paused); }
+  else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); next(); }
   else if (e.key.toLowerCase() === 'f') $('#full').click();
   else if (e.key === 'End') show(order.length);
   else if (e.key === 'Home') show(0);
@@ -250,7 +219,7 @@ const wake = () => { document.body.classList.remove('idle'); clearTimeout(idleTi
 wake();
 
 // ---------------------------------------------------------------- go
-poll(true).then(() => schedule());
+poll(true);
 setInterval(() => poll(false), POLL_MS);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(false); });
 </script>

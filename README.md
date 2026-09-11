@@ -69,8 +69,9 @@ Every `git push` to `main` redeploys automatically.
 - **Preview vote page** — see the ballot exactly as voters do, in a phone-sized frame; selections there are never recorded and never lock your device.
 - **Show QR code** — participants scan it to land straight on the voting page.
 - **Projector** — a full-screen slideshow for the big screen: one slide per candidate (photo
-  above, name below), then a live side-by-side scoreboard ranked left to right. Auto-advances,
-  with ← → space F keyboard controls and a Fullscreen button. Public, no login. Voters get a
+  above, name below), then a live side-by-side scoreboard ranked left to right. Fully manual:
+  ← → / PageUp PageDown (presenter clickers), space or Enter for next, Home/End to jump to the
+  first slide or the scoreboard, F for fullscreen, or tap the screen. Public, no login. Voters get a
   link to it after submitting. Only the tallies are exposed — admin routes still need the password.
 - **One vote per device** — on by default; toggle off for kiosk/shared-tablet voting.
 - **Clear device locks** — lets everyone vote again without touching the tally.
