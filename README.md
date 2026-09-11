@@ -71,7 +71,8 @@ Every `git push` to `main` redeploys automatically.
 - **Projector** — a full-screen slideshow for the big screen: one slide per candidate (photo
   above, name below), then a live side-by-side scoreboard ranked left to right. Fully manual:
   ← → / PageUp PageDown (presenter clickers), space or Enter for next, Home/End to jump to the
-  first slide or the scoreboard, F for fullscreen, or tap the screen. Public, no login. Voters get a
+  first slide or the scoreboard, F for fullscreen, or tap the screen. The scoreboard slide
+  carries a permanent "Scan to vote" QR so latecomers can still join. Public, no login. Voters get a
   link to it after submitting. Only the tallies are exposed — admin routes still need the password.
 - **One vote per device** — on by default; toggle off for kiosk/shared-tablet voting.
 - **Clear device locks** — lets everyone vote again without touching the tally.

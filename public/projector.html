@@ -49,6 +49,17 @@
   .lane .track > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .6s ease; }
   .lane.lead .pic { outline: 4px solid #facc15; outline-offset: 4px; }
 
+  /* --- scan-to-vote panel, pinned to the right of the lanes --- */
+  .qrpanel {
+    flex: 0 0 auto; align-self: center; display: flex; flex-direction: column; align-items: center;
+    gap: 1.2vh; padding: 2vh 1.6vw; border-radius: 22px; background: #fff; color: #111;
+    box-shadow: 0 20px 50px rgba(0,0,0,.55); margin-left: 1vw;
+  }
+  .qrpanel .code { width: min(26vh, 16vw); height: min(26vh, 16vw); }
+  .qrpanel .code img, .qrpanel .code canvas { width: 100% !important; height: 100% !important; }
+  .qrpanel .lbl { font-weight: 800; font-size: clamp(14px, 2.6vh, 26px); letter-spacing: .02em; }
+  .qrpanel .url { font-size: clamp(10px, 1.5vh, 14px); color: #555; max-width: min(26vh, 16vw); word-break: break-all; text-align: center; }
+
   /* --- chrome --- */
   .hud {
     position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 18px;
@@ -79,6 +90,7 @@
 </div>
 
 <script src="/version.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 
@@ -145,8 +157,12 @@ function buildSlides() {
   board.innerHTML = `<div class="board">
     <div class="title" id="bTitle"></div>
     <div class="meta" id="bMeta"></div>
-    <div class="lanes" id="lanes"></div>
+    <div class="lanes" id="lanesRow">
+      <div class="lanes" id="lanes" style="flex:1"></div>
+      <div class="qrpanel" id="qrpanel"><div class="code" id="qrcode"></div><div class="lbl">📱 Scan to vote</div><div class="url" id="qrurl"></div></div>
+    </div>
   </div>`;
+  drawQr();
   stage.append(board);
 
   $('#dots').innerHTML = Array.from({ length: order.length + 1 }, () => '<i></i>').join('');
@@ -156,12 +172,24 @@ function buildSlides() {
   show(current);
 }
 
+let qrDrawnFor = '';
+function drawQr() {
+  const url = data && data.voteUrl;
+  const box = $('#qrcode');
+  if (!url || !box || qrDrawnFor === url) return;
+  box.innerHTML = '';
+  $('#qrurl').textContent = url.replace(/^https?:\/\//, '');
+  if (window.QRCode) { new QRCode(box, { text: url, width: 512, height: 512, correctLevel: QRCode.CorrectLevel.M }); qrDrawnFor = url; }
+  else box.textContent = url;
+}
+
 function paintBoard() {
   if (!data || !$('#lanes')) return;
   const list = [...data.candidates].sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name));
   const total = list.reduce((n, c) => n + c.votes, 0);
   const max = Math.max(1, ...list.map(c => c.votes));
   const fp = data.title + '|' + data.open + '|' + list.map(c => c.id + ':' + c.votes).join(',');
+  drawQr();
   if (fp === lastBoardPaint) return;
   lastBoardPaint = fp;
 
