@@ -43,7 +43,12 @@
   .lane .name  { font-size: clamp(18px, 3.4vh, 40px); font-weight: 800; text-align: center; line-height: 1.15; }
   .lane .count { font-size: clamp(28px, 6.5vh, 80px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
   .lane .pct   { color: var(--muted); font-size: clamp(13px, 2vh, 20px); }
-  .lane .medal { font-size: clamp(22px, 4.5vh, 48px); height: 1.2em; }
+  .lane .medal { font-size: clamp(22px, 4.5vh, 48px); height: 1.2em; margin-bottom: 2.2vh; }
+
+  /* --- countdown to the next slide --- */
+  .progress { position: fixed; top: 0; left: 0; right: 0; height: 4px; background: #14171f; z-index: 5; }
+  .progress > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s linear; }
+  body.paused .progress > i { background: #facc15; }
   .lane .track { width: 100%; height: 1.6vh; background: #14171f; border-radius: 99px; overflow: hidden; }
   .lane .track > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .6s ease; }
   .lane.lead .pic { outline: 4px solid #facc15; outline-offset: 4px; }
@@ -64,12 +69,13 @@
   .kbd b { font-weight: 600; color: var(--text); }
 </style>
 
+<div class="progress"><i id="bar"></i></div>
 <div class="stage" id="stage"></div>
 
 <div class="hud">
   <div class="row" style="gap:10px">
     <button class="ghost" id="prev">◀</button>
-    <button class="ghost" id="pause">Pause</button>
+    <button class="ghost" id="pause">⏸ Pause</button>
     <button class="ghost" id="next">▶</button>
     <button class="ghost" id="full">Fullscreen</button>
     <span class="kbd">keys: <b>←</b> <b>→</b> <b>space</b> <b>F</b></span>
@@ -92,7 +98,6 @@ let data = null;          // latest /api/results
 let order = [];           // candidate ids in slide order (creation order, stable)
 let current = 0;          // slide index; order.length === scoreboard slide
 let paused = false;
-let timer = null;
 let lastBoardPaint = '';
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -198,17 +203,29 @@ function show(i, restart = true) {
 const next = () => show(current + 1);
 const prev = () => show(current - 1);
 
+// Auto-advance runs off a heartbeat rather than a chain of setTimeouts: a single
+// missed callback (throttled background tab, a rebuild mid-transition) would have
+// stopped the chain for good, leaving the show stuck until someone pressed a key.
+let slideStart = 0;
+const slideLength = () => (current === order.length ? BOARD_MS : SLIDE_MS);
+
 function schedule() {
-  clearTimeout(timer);
-  if (paused) return;
-  const onBoard = current === order.length;
-  timer = setTimeout(next, onBoard ? BOARD_MS : SLIDE_MS);
+  slideStart = Date.now();
 }
+
+setInterval(() => {
+  if (!order.length) return;
+  const elapsed = Date.now() - slideStart;
+  const len = slideLength();
+  $('#bar').style.width = Math.min(100, elapsed / len * 100) + '%';
+  if (!paused && elapsed >= len) next();
+}, 200);
 
 function setPaused(p) {
   paused = p;
-  $('#pause').textContent = paused ? 'Play' : 'Pause';
-  schedule();
+  document.body.classList.toggle('paused', paused);
+  $('#pause').textContent = paused ? '▶ Play' : '⏸ Pause';
+  if (!paused) schedule();
 }
 
 $('#next').onclick = next;
