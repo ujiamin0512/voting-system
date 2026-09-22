@@ -89,9 +89,11 @@
   .tile .play { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.45); opacity: 0; transition: opacity .2s;
                 font-weight: 800; font-size: clamp(16px, 3vh, 36px); color: #fff; }
   .tile:hover .play { opacity: 1; }
-  .tile .cover .cap { font-size: clamp(13px, 2.4vh, 26px); padding: 3vh 1vw 1vh; }
-  .tile .cover.gen .ico { font-size: clamp(30px, 9vh, 120px); }
-  .tile .cover.gen .big { font-size: clamp(14px, 2.8vh, 34px); display: block; white-space: nowrap; text-overflow: ellipsis; }
+  .tile .cover .cap { padding: 3vh 1vw 1vh; }
+  /* Sized from the tile width (72vw / --cols) so icon and title always fit inside. */
+  .tile .cover.gen .ico { font-size: calc(72vw / var(--cols, 4) * .28); }
+  .tile .cover.gen .big { font-size: calc(72vw / var(--cols, 4) * .085); display: block; white-space: nowrap; text-overflow: ellipsis; }
+  .tile .cover .cap { font-size: calc(72vw / var(--cols, 4) * .085); }
   .tile .b { color: var(--muted); font-size: clamp(11px, 1.8vh, 20px); padding-left: .4vw;
              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* --- links-mode scoreboard: one row per game, ranked top to bottom ---
@@ -204,7 +206,6 @@ const pic = (id, cls) => {
 };
 const links = () => data && data.mode === 'links';
 const withPhoto = c => ({ ...c, photo: photos.get(c.id) || '' });
-const GALLERY_PER_SLIDE = 12;
 
 // qrcodejs draws into a live element, so QR tiles are emitted as empty boxes tagged
 // with their URL and filled in once the markup is in the document.
@@ -279,22 +280,27 @@ function buildSlides() {
   }
 
   if (links()) {
-    // 2. Library pages: a store-front grid of covers. One QR (Vote, in the dock) takes
-    //    phones to the same library with Play buttons.
-    const pages = Math.max(1, Math.ceil(list.length / GALLERY_PER_SLIDE));
-    for (let pg = 0; pg < pages; pg++) {
-      const chunk = list.slice(pg * GALLERY_PER_SLIDE, (pg + 1) * GALLERY_PER_SLIDE);
-      const cols = Math.min(5, Math.max(3, Math.ceil(Math.sqrt(chunk.length * 1.4))));
-      slide(`<div class="gallery">
-        <div class="title">🎮 Games${pages > 1 ? ` · ${pg + 1} / ${pages}` : ''}</div>
-        <div class="meta">Click a game to play it here · scan the Vote code to play and vote on your phone</div>
-        <div class="tiles" style="--cols:${cols}">${chunk.map(c => `
-          <a class="tile" href="${esc(c.link).replace(/"/g, '&quot;')}" target="_blank" rel="noopener">
-            ${coverTile(withPhoto(c)).replace(/<\/div>$/, '<div class="play">▶ Play</div></div>')}
-            <div class="b">by ${esc(c.name)}</div></a>`).join('')
-          || '<p class="muted">No games submitted yet.</p>'}</div>
-      </div>`);
+    // 2. Library: one store-front grid with every game. The column count is the smallest
+    //    that lets all rows fit on screen (16:9 covers plus a caption line), so more
+    //    games simply mean smaller tiles rather than a second page.
+    const chunk = list;
+    const W = window.innerWidth * 0.72, H = window.innerHeight * 0.72, gap = window.innerHeight * 0.02;
+    let cols = 3;
+    while (cols < 10) {
+      const rows = Math.ceil(chunk.length / cols);
+      const tileH = (W / cols) * 9 / 16 + window.innerHeight * 0.03;
+      if (rows * (tileH + gap) <= H) break;
+      cols++;
     }
+    slide(`<div class="gallery">
+      <div class="title">🎮 Games</div>
+      <div class="meta">Click a game to play it here · scan the Vote code to play and vote on your phone</div>
+      <div class="tiles" style="--cols:${cols}">${chunk.map(c => `
+        <a class="tile" href="${esc(c.link).replace(/"/g, '&quot;')}" target="_blank" rel="noopener">
+          ${coverTile(withPhoto(c)).replace(/<\/div>$/, '<div class="play">▶ Play</div></div>')}
+          <div class="b">by ${esc(c.name)}</div></a>`).join('')
+        || '<p class="muted">No games submitted yet.</p>'}</div>
+    </div>`);
   } else {
     // 2. One photo per slide.
     list.forEach((c, i) => slide(`<div class="hero">
@@ -417,6 +423,9 @@ document.addEventListener('keydown', e => {
 
   else if (e.key === 'Home') show(0);
 });
+
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (data) buildSlides(); }, 300); });
 
 // Hide the controls when the mouse has been still for a few seconds.
 let idleTimer;
