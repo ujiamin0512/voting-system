@@ -128,6 +128,26 @@
   .dock .mini[hidden] { display: none; }
   .slide { padding-right: calc(5vw + min(16vh, 10vw) + 2vw); }
 
+  /* --- phones / portrait: no dock, single scrollable column --- */
+  @media (max-width: 700px), (orientation: portrait) {
+    .dock { display: none; }
+    .slide { padding: 2vh 4vw 9vh; }
+    .rows { display: flex; flex-direction: column; justify-content: flex-start; gap: 8px; --rh: 64px;
+            overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+    .rows::-webkit-scrollbar { display: none; }
+    .rowl { flex: 0 0 var(--rh); gap: 10px; padding: 0 12px; }
+    .rowl .name { font-size: 18px; }
+    .rowl .name span { display: block; margin: 0; font-size: 13px; }
+    .rowl .count { font-size: 26px; }
+    .rowl .count small { font-size: 11px; }
+    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; align-content: start; overflow-y: auto; }
+    .lanes { flex-wrap: wrap; overflow-y: auto; align-content: flex-start; }
+    .lane { flex: 1 1 40%; max-width: 46%; }
+    .submit .body { flex-direction: column; }
+    .submitlist { flex: 0 0 auto; max-height: none; width: 100%; }
+    .qrpanel .code, .submit .qrpanel .code { width: 46vw; height: 46vw; }
+  }
+
   /* --- chrome --- */
   .hud {
     position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 18px;
