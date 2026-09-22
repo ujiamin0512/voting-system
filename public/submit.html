@@ -8,7 +8,7 @@
   .form label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
   .form label[hidden] { display: none; }
   .form input { width: 100%; }
-  .preview { width: 100%; max-width: 460px; aspect-ratio: 1/1; object-fit: cover; border-radius: 12px; background: #0b0d13; display: none; }
+  .preview { width: 100%; max-width: 460px; aspect-ratio: 16/9; object-fit: cover; border-radius: 12px; background: #0b0d13; display: none; }
   .qr { background: #fff; padding: 14px; border-radius: 12px; display: inline-grid; place-items: center; margin: 12px auto; }
   .qr img, .qr canvas { width: 220px !important; height: 220px !important; }
 </style>
@@ -21,7 +21,7 @@
     <label>Your name <input id="fName" maxlength="60" required autocomplete="name"></label>
     <label id="lGame" hidden>Game name <input id="fGame" maxlength="80"></label>
     <label id="lLink" hidden>Link to play <input id="fLink" type="url" inputmode="url" placeholder="https://…"></label>
-    <label id="lPhoto" hidden>Photo <input id="fPhoto" type="file" accept="image/*"></label>
+    <label id="lPhoto" hidden><span id="lPhotoTxt">Photo</span> <input id="fPhoto" type="file" accept="image/*"></label>
     <img class="preview" id="preview" alt="">
     <button id="submit">Submit</button>
     <p id="msg" class="err" style="margin:0"></p>
@@ -71,11 +71,12 @@ async function load() {
   }
   const links = mode === 'links';
   $('#rule').textContent = links
-    ? 'Enter your name, your game and the link to play it. Everyone will get a QR code to try it.'
+    ? 'Enter your name, your game and the link to play it. A cover image makes it stand out in the library.'
     : 'Enter your name and pick a photo to enter.';
   $('#lGame').hidden = !links;
   $('#lLink').hidden = !links;
-  $('#lPhoto').hidden = links;
+  $('#lPhoto').hidden = false;
+  $('#lPhotoTxt').textContent = links ? 'Cover image (optional)' : 'Photo';
   $('#fGame').required = links;
   $('#fLink').required = links;
   $('#fPhoto').required = !links && !mine;
@@ -103,7 +104,7 @@ $('#form').onsubmit = async e => {
   $('#submit').disabled = true; $('#msg').textContent = '';
   const body = { name: $('#fName').value, deviceId: store.get() || deviceId };
   if (mode === 'links') { body.game = $('#fGame').value; body.link = $('#fLink').value; }
-  else body.photo = photo || (mine && mine.photo) || '';
+  body.photo = photo || (mine && mine.photo) || '';
   const r = await fetch('/api/submit', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   });

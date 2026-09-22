@@ -55,7 +55,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 }
 .cand .ph { display: flex; align-items: center; justify-content: center; font-size: 34px; }
 .cand .body { padding: 10px 12px; }
-.cand .ph.game { aspect-ratio: 16/9; }
+.cand .cover { border-radius: 0; box-shadow: none; font-size: 11px; }
 .cand .by { font-size: 13px; }
 .cand .play {
   display: inline-block; margin-top: 8px; padding: 6px 12px; border-radius: 8px;
@@ -81,3 +81,23 @@ td, th { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: le
 }
 dialog { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
 dialog::backdrop { background: rgba(0,0,0,.6); }
+
+/* Game cover tiles (see cover.js). 16:9 like a store front. */
+.cover {
+  position: relative; aspect-ratio: 16/9; border-radius: 10px; overflow: hidden; background: #0b0d13;
+  display: grid; place-items: center; box-shadow: 0 10px 30px rgba(0,0,0,.45);
+}
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover .cap {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 10px 8px; font-weight: 800; color: #fff;
+  background: linear-gradient(transparent, rgba(0,0,0,.8)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cover.gen {
+  background: linear-gradient(135deg, hsl(var(--h) 70% 38%), hsl(calc(var(--h) + 50) 75% 22%));
+  padding: 8%;
+}
+.cover.gen .big {
+  font-weight: 900; color: #fff; text-align: center; line-height: 1.05; letter-spacing: -.02em;
+  font-size: clamp(16px, 2.6em, 64px); text-shadow: 0 4px 18px rgba(0,0,0,.5); overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}

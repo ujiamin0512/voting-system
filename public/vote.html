@@ -17,6 +17,7 @@
 </div>
 
 <script src="/version.js"></script>
+<script src="/cover.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 let need = 1, picked = new Set(), deviceId = '';
@@ -68,7 +69,7 @@ async function load() {
 
   const links = settings.mode === 'links';
   if (links) $('#rule').insertAdjacentHTML('afterend',
-    '<p class="muted" style="margin-top:-8px">Tap ▶ Play to try a game first. Submitted one? <a href="/submit" style="color:var(--accent)">Edit it</a>.</p>');
+    '<p class="muted" style="margin-top:-8px">🎮 Game library — tap ▶ Play to try a game, tap the card to pick it. Submitted one? <a href="/submit" style="color:var(--accent)">Edit it</a>.</p>');
 
   $('#grid').innerHTML = '';
   candidates.forEach(c => {
@@ -77,8 +78,8 @@ async function load() {
     if (links) {
       // Game name is the headline, the creator underneath, and a Play link that
       // opens the game without toggling the selection.
-      el.innerHTML = `<div class="ph game">🎮</div>
-        <div class="body"><b></b><div class="muted by"></div>
+      el.innerHTML = coverTile(c) +
+        `<div class="body"><b></b><div class="muted by"></div>
         <a class="play" target="_blank" rel="noopener">▶ Play</a></div>`;
       el.querySelector('b').textContent = c.game || c.name;
       el.querySelector('.by').textContent = 'by ' + c.name;

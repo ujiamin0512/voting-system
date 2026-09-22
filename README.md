@@ -84,8 +84,9 @@ Every `git push` to `main` redeploys automatically.
   is public. A dock in the top-right corner shows the "Vote" and "Submit" QR codes on every slide
   (each disappears when that action is closed). While submissions are open
   the deck starts with a "Scan to submit" slide (QR + live list of what has come in). In Links
-  mode the per-candidate slides are replaced by a "Scan to play" gallery — every game as a QR
-  tile, 12 per page — and the scoreboard shows each game's QR in place of a photo. Public, no
+  mode the per-candidate slides are replaced by a store-style **Game library** grid of covers
+  (uploaded cover image, or a generated poster from the title), 12 per page, and the scoreboard
+  shows covers in place of photos. Public, no
   login. Voters get a link to it after submitting. Only the tallies are exposed — admin routes
   still need the password.
 - **One vote per device** — on by default; toggle off for kiosk/shared-tablet voting.
@@ -109,13 +110,12 @@ banner with a Reload button rather than interrupting an edit.
 ## Links mode (game jams, demos)
 
 1. Admin sets **Participants submit → Links** and shows the Submit QR (or the projector's first slide).
-2. Participants scan, enter their name, game name and a link to play it. They get a QR of their
-   link straight away; the projector's gallery slide shows everyone's.
-3. Others scan a game's QR to play it, then vote on `/vote`, where each card has a ▶ Play button.
+2. Participants scan, enter their name, game name, a link to play it and (optionally) a cover image.
+3. Everyone scans the single **Vote** QR: `/vote` is the game library — each card has a ▶ Play
+   button that opens the game, and tapping the card picks it for the ballot.
 4. Same ballot rules, device locking and scoreboard as picture voting.
 
-The link must be an `http(s)` URL. The projector encodes it as-is, so it should be publicly
-reachable from the participants' phones.
+The link must be an `http(s)` URL reachable from the participants' phones.
 
 ## Voting rules
 

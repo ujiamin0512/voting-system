@@ -153,9 +153,9 @@ async function load() {
   $('#sMode').value = mode;
   $('#sSubs').checked = s.settings.submissionsOpen;
   // The add form and the table follow the mode.
-  $('#cGame').hidden = !links; $('#cLink').hidden = !links; $('#cPhoto').hidden = links;
+  $('#cGame').hidden = !links; $('#cLink').hidden = !links; $('#cPhoto').title = links ? 'Cover image (optional)' : 'Photo';
   $('#head').innerHTML = links
-    ? '<tr><th>Name</th><th>Game</th><th>Link</th><th style="width:80px">Votes</th><th style="width:170px"></th></tr>'
+    ? '<tr><th>Name</th><th>Game</th><th>Link</th><th style="width:80px">Votes</th><th style="width:280px"></th></tr>'
     : '<tr><th style="width:64px">Photo</th><th>Name</th><th style="width:80px">Votes</th><th style="width:190px"></th></tr>';
   $('#count').textContent = `(${s.candidates.length})`;
   $('#stat').textContent = `${links ? 'Links' : 'Pictures'} mode · ${s.ballotCount} ballot(s) submitted · ${s.lockedDevices} device lock(s) · voting ${s.settings.open ? 'OPEN' : 'CLOSED'} · submissions ${s.settings.submissionsOpen ? 'OPEN' : 'CLOSED'} · storage: ${s.storage}`;
@@ -182,15 +182,19 @@ function rowFor(c) {
         ${c.link ? `<a href="${q(c.link)}" target="_blank" rel="noopener" style="color:var(--accent)" title="Open">↗</a>` : ''}</div></td>
       <td><input type="number" min="0" value="${c.votes}" data-votes style="width:70px"></td>
       <td class="row">
+        <input type="file" accept="image/*" data-file style="width:104px" title="Cover image">
         <button data-save>Save</button>
         <button class="danger" data-del>Delete</button>
       </td>`;
     tr.querySelector('[data-save]').onclick = async () => {
       try {
-        await api('/api/candidates/' + c.id, { method: 'PUT', body: JSON.stringify({
+        const body = {
           name: tr.querySelector('[data-name]').value, game: tr.querySelector('[data-game]').value,
           link: tr.querySelector('[data-link]').value, votes: +tr.querySelector('[data-votes]').value
-        })});
+        };
+        const f = tr.querySelector('[data-file]').files[0];
+        if (f) body.photo = await toDataUrl(f);
+        await api('/api/candidates/' + c.id, { method: 'PUT', body: JSON.stringify(body) });
         load();
       } catch (e) { alert(e.message); }
     };
@@ -245,7 +249,7 @@ $('#addBtn').onclick = async () => {
   try {
     const body = { name: $('#cName').value };
     if (mode === 'links') { body.game = $('#cGame').value; body.link = $('#cLink').value; }
-    else { const f = $('#cPhoto').files[0]; body.photo = f ? await toDataUrl(f) : ''; }
+    const f = $('#cPhoto').files[0]; body.photo = f ? await toDataUrl(f) : '';
     await api('/api/candidates', { method: 'POST', body: JSON.stringify(body) });
     $('#cName').value = ''; $('#cPhoto').value = ''; $('#cGame').value = ''; $('#cLink').value = '';
     load();
