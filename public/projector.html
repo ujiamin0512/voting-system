@@ -94,26 +94,30 @@
   .tile .cover.gen .big { font-size: clamp(14px, 2.8vh, 34px); display: block; white-space: nowrap; text-overflow: ellipsis; }
   .tile .b { color: var(--muted); font-size: clamp(11px, 1.8vh, 20px); padding-left: .4vw;
              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  /* --- links-mode scoreboard: one row per game, ranked top to bottom --- */
-  .rows { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1.2vh; min-height: 0; padding: 0 2vw; }
-  .rowl { display: grid; grid-template-columns: 5vw 12vh 1fr 12vw; align-items: center; gap: 1.5vw;
-          background: #11141c; border: 1px solid #1d2230; border-radius: 18px; padding: 1vh 1.5vw;
-          transition: transform .5s ease, background .5s; }
+  /* --- links-mode scoreboard: one row per game, ranked top to bottom ---
+     Row height is derived from the number of rows (--n) so ten games still fit
+     under the title without overlapping. */
+  .rows { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1vh; min-height: 0; padding: 0 2vw;
+          overflow: hidden; --rh: min(9vh, (70vh - 1vh * var(--n, 1)) / var(--n, 1)); }
+  .rowl { flex: 0 0 var(--rh); height: var(--rh); display: grid; grid-template-columns: 5vw calc(var(--rh) * 1.6) 1fr 12vw;
+          align-items: center; gap: 1.5vw; background: #11141c; border: 1px solid #1d2230; border-radius: 18px; padding: 0 1.5vw;
+          transition: transform .5s ease, background .5s; box-sizing: border-box; }
   .rowl.lead { background: #171a26; border-color: #facc15; }
-  .rowl .rank { font-size: clamp(18px, 4vh, 44px); font-weight: 900; text-align: center; color: var(--muted); }
+  .rowl .rank { font-size: calc(var(--rh) * .45); font-weight: 900; text-align: center; color: var(--muted); line-height: 1; }
   .rowl.lead .rank { color: #facc15; }
-  .rowl .icon { width: 12vh; height: 6.75vh; }
+  .rowl .icon { width: calc(var(--rh) * 1.6); height: calc(var(--rh) * .82); }
   .rowl .icon .cover { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 10px; font-size: 6px; box-shadow: none; }
   .rowl .icon .cover .cap { display: none; }
-  .rowl .icon .cover.gen .ico { font-size: clamp(18px, 4vh, 44px); }
+  .rowl .icon .cover.gen .ico { font-size: calc(var(--rh) * .5); }
   .rowl .icon .cover.gen .big { display: none; }
-  .rowl .info { min-width: 0; display: flex; flex-direction: column; gap: .6vh; }
-  .rowl .name { font-size: clamp(18px, 3.4vh, 40px); font-weight: 800; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rowl .info { min-width: 0; display: flex; flex-direction: column; gap: calc(var(--rh) * .08); }
+  .rowl .name { font-size: calc(var(--rh) * .38); font-weight: 800; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rowl .name span { color: var(--muted); font-weight: 500; font-size: .6em; margin-left: .6em; }
-  .rowl .track { width: 100%; height: 1.4vh; background: #1a1e2a; border-radius: 99px; overflow: hidden; }
+  .rowl .track { width: 100%; height: calc(var(--rh) * .14); background: #1a1e2a; border-radius: 99px; overflow: hidden; }
   .rowl .track > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .6s ease; }
-  .rowl .count { text-align: right; font-size: clamp(24px, 5vh, 60px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
-  .rowl .count small { display: block; color: var(--muted); font-size: clamp(11px, 1.8vh, 18px); font-weight: 500; }
+  .rowl .count { text-align: right; font-size: calc(var(--rh) * .55); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+  .rowl .count small { display: block; color: var(--muted); font-size: calc(var(--rh) * .2); font-weight: 500; }
+  .rows .more { color: var(--muted); text-align: center; margin: 0; font-size: clamp(12px, 2vh, 20px); }
 
   /* --- dock: vote + submit QRs pinned to every slide --- */
   .dock { position: fixed; top: 2vh; right: 1.5vw; display: flex; flex-direction: column; gap: 1.5vh; z-index: 5; }
@@ -334,6 +338,7 @@ function paintBoard() {
     // as a small icon. Rows stay readable however many games there are.
     const rows = list.slice(0, 10);
     $('#lanes').className = 'rows';
+    $('#lanes').style.setProperty('--n', rows.length + (list.length > rows.length ? 1 : 0));
     $('#lanes').innerHTML = rows.map((c, i) => `
       <div class="rowl ${i === 0 && c.votes > 0 ? 'lead' : ''}">
         <div class="rank">${medal(c, i) || i + 1}</div>
@@ -345,7 +350,7 @@ function paintBoard() {
         <div class="count">${c.votes}<small>${total ? Math.round(c.votes / total * 100) : 0}%</small></div>
       </div>`).join('') || '<p class="muted">No games yet.</p>';
     if (list.length > rows.length)
-      $('#lanes').insertAdjacentHTML('beforeend', `<p class="muted" style="text-align:center;margin:0">+ ${list.length - rows.length} more</p>`);
+      $('#lanes').insertAdjacentHTML('beforeend', `<p class="more">+ ${list.length - rows.length} more</p>`);
     return;
   }
 
