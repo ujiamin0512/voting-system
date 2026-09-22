@@ -61,8 +61,11 @@
   .qrpanel .url { font-size: clamp(10px, 1.5vh, 14px); color: #555; max-width: min(26vh, 16vw); word-break: break-all; text-align: center; }
 
   .lane .by { color: var(--muted); font-size: clamp(13px, 2.2vh, 22px); margin-top: -.8vh; }
-  .lane .pic.qr { background: #fff; padding: 4%; }
-  .lane .pic.qr img, .lane .pic.qr canvas { width: 100% !important; height: 100% !important; }
+  /* Square QR: cap the width too, or a wide lane makes it taller than the 34vh limit
+     and it spills over the name and vote count below. */
+  .lane .pic.qr { background: #fff; padding: 4%; max-width: 34vh; overflow: hidden; }
+  .lane .pic.qr img { width: 100% !important; height: 100% !important; object-fit: contain; }
+  .lane .pic.qr canvas { display: none; }
 
   /* --- submit slide: big QR + live list of what has come in --- */
   .submit { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 2vh; }
