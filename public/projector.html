@@ -49,7 +49,7 @@
   .lane .track > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .6s ease; }
   .lane.lead .pic { outline: 4px solid #facc15; outline-offset: 4px; }
 
-  /* --- scan-to-vote panel, pinned to the right of the lanes --- */
+  /* --- white QR panel (submit slide) --- */
   .qrpanel {
     flex: 0 0 auto; align-self: center; display: flex; flex-direction: column; align-items: center;
     gap: 1.2vh; padding: 2vh 1.6vw; border-radius: 22px; background: #fff; color: #111;
@@ -90,6 +90,16 @@
              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tile .b { color: #555; font-size: clamp(11px, 1.7vh, 18px); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+  /* --- dock: vote + submit QRs pinned to every slide --- */
+  .dock { position: fixed; top: 2vh; right: 1.5vw; display: flex; flex-direction: column; gap: 1.5vh; z-index: 5; }
+  .dock .mini { background: #fff; color: #111; border-radius: 14px; padding: 1vh .8vw; display: flex; flex-direction: column;
+                align-items: center; gap: .5vh; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+  .dock .mini .code { width: min(16vh, 10vw); height: min(16vh, 10vw); }
+  .dock .mini .code img, .dock .mini .code canvas { width: 100% !important; height: 100% !important; }
+  .dock .mini .lbl { font-weight: 800; font-size: clamp(11px, 1.8vh, 18px); white-space: nowrap; }
+  .dock .mini[hidden] { display: none; }
+  .slide { padding-right: calc(5vw + min(16vh, 10vw) + 2vw); }
+
   /* --- chrome --- */
   .hud {
     position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 18px;
@@ -107,6 +117,10 @@
 </style>
 
 <div class="stage" id="stage"></div>
+<div class="dock" id="dock">
+  <div class="mini" id="dockVote"><div class="code"></div><div class="lbl">📱 Vote</div></div>
+  <div class="mini" id="dockSubmit"><div class="code"></div><div class="lbl">➕ Submit</div></div>
+</div>
 
 <div class="hud">
   <div class="row" style="gap:10px">
@@ -241,12 +255,8 @@ function buildSlides() {
   slide(`<div class="board">
     <div class="title" id="bTitle"></div>
     <div class="meta" id="bMeta"></div>
-    <div class="lanes" id="lanesRow">
-      <div class="lanes" id="lanes" style="flex:1"></div>
-      <div class="qrpanel" id="qrpanel"><div class="code" id="qrcode"></div><div class="lbl">📱 Scan to vote</div><div class="url" id="qrurl"></div></div>
-    </div>
+    <div class="lanes" id="lanes"></div>
   </div>`);
-  drawQr();
 
   const n = document.querySelectorAll('.slide').length;
   $('#dots').innerHTML = Array.from({ length: n }, () => '<i></i>').join('');
@@ -256,15 +266,16 @@ function buildSlides() {
   show(current);
 }
 
-let qrDrawnFor = '';
-function drawQr() {
-  const url = data && data.voteUrl;
-  const box = $('#qrcode');
-  if (!url || !box || qrDrawnFor === url) return;
-  box.innerHTML = '';
-  $('#qrurl').textContent = url.replace(/^https?:\/\//, '');
-  if (window.QRCode) { new QRCode(box, { text: url, width: 512, height: 512, correctLevel: QRCode.CorrectLevel.M }); qrDrawnFor = url; }
-  else box.textContent = url;
+// Both QR codes stay on screen whatever slide is showing, so people can join or
+// submit at any point; each hides when its action is closed.
+function paintDock() {
+  const set = (id, url, on) => {
+    const el = $(id); el.hidden = !on;
+    const box = el.querySelector('.code');
+    if (on) { box.dataset.qr = url; fillQrs(el); }
+  };
+  set('#dockVote', data.voteUrl, data.open);
+  set('#dockSubmit', data.submitUrl, data.submissionsOpen);
 }
 
 function paintBoard() {
@@ -273,7 +284,6 @@ function paintBoard() {
   const total = list.reduce((n, c) => n + c.votes, 0);
   const max = Math.max(1, ...list.map(c => c.votes));
   const fp = data.title + '|' + data.open + '|' + list.map(c => c.id + ':' + c.votes).join(',');
-  drawQr();
   if (fp === lastBoardPaint) return;
   lastBoardPaint = fp;
 
@@ -296,6 +306,7 @@ function paintBoard() {
     </div>`).join('') || '<p class="muted">No candidates yet.</p>';
   fillQrs($('#lanes'));
 
+  paintDock();
   const sub = $('#subList');
   if (sub) sub.innerHTML = [...data.candidates].reverse().slice(0, 12).map(c => links()
     ? `<div class="it">${esc(c.game || c.name)} <span>by ${esc(c.name)}</span></div>`

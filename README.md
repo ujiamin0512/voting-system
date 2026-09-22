@@ -81,7 +81,8 @@ Every `git push` to `main` redeploys automatically.
   above, name below), then a live side-by-side scoreboard ranked left to right. Fully manual:
   ← → / PageUp PageDown (presenter clickers), space or Enter for next, Home/End to jump to the
   first slide or the scoreboard, F for fullscreen, or tap the screen. The scoreboard slide
-  carries a permanent "Scan to vote" QR so latecomers can still join. While submissions are open
+  is public. A dock in the top-right corner shows the "Vote" and "Submit" QR codes on every slide
+  (each disappears when that action is closed). While submissions are open
   the deck starts with a "Scan to submit" slide (QR + live list of what has come in). In Links
   mode the per-candidate slides are replaced by a "Scan to play" gallery — every game as a QR
   tile, 12 per page — and the scoreboard shows each game's QR in place of a photo. Public, no
