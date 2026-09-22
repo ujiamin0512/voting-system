@@ -56,6 +56,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .cand .ph { display: flex; align-items: center; justify-content: center; font-size: 34px; }
 .cand .body { padding: 10px 12px; }
 .cand .cover { border-radius: 0; box-shadow: none; font-size: 11px; }
+.cand .cover.gen .big { display: none; } /* the title is printed under the card already */
 .cand .by { font-size: 13px; }
 .cand .play {
   display: inline-block; margin-top: 8px; padding: 6px 12px; border-radius: 8px;
@@ -93,11 +94,12 @@ dialog::backdrop { background: rgba(0,0,0,.6); }
   background: linear-gradient(transparent, rgba(0,0,0,.8)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .cover.gen {
-  background: linear-gradient(135deg, hsl(var(--h) 70% 38%), hsl(calc(var(--h) + 50) 75% 22%));
-  padding: 8%;
+  background: radial-gradient(circle at 50% 35%, #1f2434, #0b0d13 70%);
+  padding: 4% 6%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3em;
 }
+.cover.gen .ico { font-size: clamp(28px, 4.2em, 110px); line-height: 1; filter: drop-shadow(0 6px 14px rgba(0,0,0,.6)); }
 .cover.gen .big {
-  font-weight: 900; color: #fff; text-align: center; line-height: 1.05; letter-spacing: -.02em;
-  font-size: clamp(16px, 2.6em, 64px); text-shadow: 0 4px 18px rgba(0,0,0,.5); overflow: hidden;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  font-weight: 800; color: #fff; text-align: center; line-height: 1.1; letter-spacing: -.01em;
+  font-size: clamp(12px, 1.5em, 34px); overflow: hidden; max-width: 100%;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
