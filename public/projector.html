@@ -81,15 +81,37 @@
   .gallery .meta { color: var(--muted); text-align: center; font-size: clamp(14px, 2.2vh, 22px); margin-top: -1vh; }
   .tiles { flex: 1; display: grid; gap: 2vh 1.2vw; align-content: center; justify-content: center; min-height: 0;
            grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); }
-  .tile { display: flex; flex-direction: column; gap: .8vh; min-width: 0; transition: transform .3s; }
+  .tiles { max-width: 150vh; margin: 0 auto; width: 100%; }
+  .tile { display: flex; flex-direction: column; gap: .8vh; min-width: 0; transition: transform .2s; text-decoration: none; color: inherit; cursor: pointer; }
+  .tile:hover { transform: scale(1.04); }
   .tile .cover { font-size: clamp(10px, 1.6vh, 18px); border-radius: 14px; border: 2px solid transparent; }
+  .tile:hover .cover { border-color: var(--accent); }
+  .tile .play { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.45); opacity: 0; transition: opacity .2s;
+                font-weight: 800; font-size: clamp(16px, 3vh, 36px); color: #fff; }
+  .tile:hover .play { opacity: 1; }
   .tile .cover .cap { font-size: clamp(13px, 2.4vh, 26px); padding: 3vh 1vw 1vh; }
   .tile .cover.gen .big { font-size: clamp(16px, 3.6vh, 44px); }
   .tile .b { color: var(--muted); font-size: clamp(11px, 1.8vh, 20px); padding-left: .4vw;
              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lane .cover { width: 100%; max-height: 34vh; aspect-ratio: 16/10; border-radius: 22px; font-size: clamp(10px, 1.6vh, 18px); }
-  .lane .cover .cap { display: none; }
-  .lane .cover.gen .big { font-size: clamp(11px, 2.4vh, 28px); }
+  /* --- links-mode scoreboard: one row per game, ranked top to bottom --- */
+  .rows { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1.2vh; min-height: 0; padding: 0 2vw; }
+  .rowl { display: grid; grid-template-columns: 5vw 12vh 1fr 12vw; align-items: center; gap: 1.5vw;
+          background: #11141c; border: 1px solid #1d2230; border-radius: 18px; padding: 1vh 1.5vw;
+          transition: transform .5s ease, background .5s; }
+  .rowl.lead { background: #171a26; border-color: #facc15; }
+  .rowl .rank { font-size: clamp(18px, 4vh, 44px); font-weight: 900; text-align: center; color: var(--muted); }
+  .rowl.lead .rank { color: #facc15; }
+  .rowl .icon { width: 12vh; height: 6.75vh; }
+  .rowl .icon .cover { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 10px; font-size: 6px; box-shadow: none; }
+  .rowl .icon .cover .cap { display: none; }
+  .rowl .icon .cover.gen .big { font-size: clamp(10px, 1.8vh, 20px); -webkit-line-clamp: 2; }
+  .rowl .info { min-width: 0; display: flex; flex-direction: column; gap: .6vh; }
+  .rowl .name { font-size: clamp(18px, 3.4vh, 40px); font-weight: 800; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rowl .name span { color: var(--muted); font-weight: 500; font-size: .6em; margin-left: .6em; }
+  .rowl .track { width: 100%; height: 1.4vh; background: #1a1e2a; border-radius: 99px; overflow: hidden; }
+  .rowl .track > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .6s ease; }
+  .rowl .count { text-align: right; font-size: clamp(24px, 5vh, 60px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+  .rowl .count small { display: block; color: var(--muted); font-size: clamp(11px, 1.8vh, 18px); font-weight: 500; }
 
   /* --- dock: vote + submit QRs pinned to every slide --- */
   .dock { position: fixed; top: 2vh; right: 1.5vw; display: flex; flex-direction: column; gap: 1.5vh; z-index: 5; }
@@ -237,12 +259,14 @@ function buildSlides() {
     const pages = Math.max(1, Math.ceil(list.length / GALLERY_PER_SLIDE));
     for (let pg = 0; pg < pages; pg++) {
       const chunk = list.slice(pg * GALLERY_PER_SLIDE, (pg + 1) * GALLERY_PER_SLIDE);
-      const cols = Math.min(5, Math.max(2, Math.ceil(Math.sqrt(chunk.length * 1.4))));
+      const cols = Math.min(5, Math.max(3, Math.ceil(Math.sqrt(chunk.length * 1.4))));
       slide(`<div class="gallery">
-        <div class="title">🎮 Game library${pages > 1 ? ` · ${pg + 1} / ${pages}` : ''}</div>
-        <div class="meta">Scan the Vote code to play any of these on your phone</div>
+        <div class="title">🎮 Games${pages > 1 ? ` · ${pg + 1} / ${pages}` : ''}</div>
+        <div class="meta">Click a game to play it here · scan the Vote code to play and vote on your phone</div>
         <div class="tiles" style="--cols:${cols}">${chunk.map(c => `
-          <div class="tile">${coverTile(withPhoto(c))}<div class="b">by ${esc(c.name)}</div></div>`).join('')
+          <a class="tile" href="${esc(c.link).replace(/"/g, '&quot;')}" target="_blank" rel="noopener">
+            ${coverTile(withPhoto(c)).replace(/<\/div>$/, '<div class="play">▶ Play</div></div>')}
+            <div class="b">by ${esc(c.name)}</div></a>`).join('')
           || '<p class="muted">No games submitted yet.</p>'}</div>
       </div>`);
     }
@@ -291,29 +315,49 @@ function paintBoard() {
   if (fp === lastBoardPaint) return;
   lastBoardPaint = fp;
 
-  document.title = data.title + ' — Projector';
-  $('#bTitle').textContent = '🏆 ' + data.title;
-  $('#bMeta').textContent =
-    `${data.ballotCount} ballot(s) · ${total} vote(s) · voting ${data.open ? 'OPEN' : 'CLOSED'}`;
-
-  // Ranked left → right. Widths shrink as the field grows so everything stays on screen.
-  // In links mode the picture slot holds the game's QR so it can still be scanned here.
-  $('#lanes').innerHTML = list.map((c, i) => `
-    <div class="lane ${i === 0 && c.votes > 0 ? 'lead' : ''}">
-      <div class="medal">${c.votes > 0 ? (['🥇', '🥈', '🥉'][i] || '') : ''}</div>
-      ${links() ? coverTile(withPhoto(c), 'cover') : pic(c.id, 'pic')}
-      <div class="name">${esc(links() ? (c.game || c.name) : c.name)}</div>
-      ${links() ? `<div class="by">by ${esc(c.name)}</div>` : ''}
-      <div class="count">${c.votes}</div>
-      <div class="pct">${total ? Math.round(c.votes / total * 100) : 0}%</div>
-      <div class="track"><i style="width:${c.votes / max * 100}%"></i></div>
-    </div>`).join('') || '<p class="muted">No candidates yet.</p>';
-
   paintDock();
   const sub = $('#subList');
   if (sub) sub.innerHTML = [...data.candidates].reverse().slice(0, 12).map(c => links()
     ? `<div class="it">${esc(c.game || c.name)} <span>by ${esc(c.name)}</span></div>`
     : `<div class="it">${esc(c.name)}</div>`).join('') || '<div class="it"><span>Nothing yet — be the first!</span></div>';
+
+  document.title = data.title + ' — Projector';
+  $('#bTitle').textContent = '🏆 ' + data.title;
+  $('#bMeta').textContent =
+    `${data.ballotCount} ballot(s) · ${total} vote(s) · voting ${data.open ? 'OPEN' : 'CLOSED'}`;
+
+  const medal = (c, i) => c.votes > 0 ? (['🥇', '🥈', '🥉'][i] || '') : '';
+  if (links()) {
+    // Links mode: a leaderboard, one row per game ranked top to bottom, with the cover
+    // as a small icon. Rows stay readable however many games there are.
+    const rows = list.slice(0, 10);
+    $('#lanes').className = 'rows';
+    $('#lanes').innerHTML = rows.map((c, i) => `
+      <div class="rowl ${i === 0 && c.votes > 0 ? 'lead' : ''}">
+        <div class="rank">${medal(c, i) || i + 1}</div>
+        <div class="icon">${coverTile(withPhoto(c))}</div>
+        <div class="info">
+          <div class="name">${esc(c.game || c.name)}<span>by ${esc(c.name)}</span></div>
+          <div class="track"><i style="width:${c.votes / max * 100}%"></i></div>
+        </div>
+        <div class="count">${c.votes}<small>${total ? Math.round(c.votes / total * 100) : 0}%</small></div>
+      </div>`).join('') || '<p class="muted">No games yet.</p>';
+    if (list.length > rows.length)
+      $('#lanes').insertAdjacentHTML('beforeend', `<p class="muted" style="text-align:center;margin:0">+ ${list.length - rows.length} more</p>`);
+    return;
+  }
+
+  // Ranked left → right. Widths shrink as the field grows so everything stays on screen.
+  $('#lanes').className = 'lanes';
+  $('#lanes').innerHTML = list.map((c, i) => `
+    <div class="lane ${i === 0 && c.votes > 0 ? 'lead' : ''}">
+      <div class="medal">${medal(c, i)}</div>
+      ${pic(c.id, 'pic')}
+      <div class="name">${esc(c.name)}</div>
+      <div class="count">${c.votes}</div>
+      <div class="pct">${total ? Math.round(c.votes / total * 100) : 0}%</div>
+      <div class="track"><i style="width:${c.votes / max * 100}%"></i></div>
+    </div>`).join('') || '<p class="muted">No candidates yet.</p>';
 }
 
 // ---------------------------------------------------------------- navigation
@@ -332,6 +376,7 @@ $('#prev').onclick = prev;
 // Tap or click the slide itself: right two-thirds goes forward, left third goes back,
 // so it works from a touchscreen or a mouse without hunting for the small buttons.
 $('#stage').addEventListener('click', e => {
+  if (e.target.closest('a')) return; // presenter opening a game
   (e.clientX < window.innerWidth / 3 ? prev : next)();
 });
 $('#full').onclick = () => document.fullscreenElement

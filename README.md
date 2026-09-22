@@ -84,9 +84,10 @@ Every `git push` to `main` redeploys automatically.
   is public. A dock in the top-right corner shows the "Vote" and "Submit" QR codes on every slide
   (each disappears when that action is closed). While submissions are open
   the deck starts with a "Scan to submit" slide (QR + live list of what has come in). In Links
-  mode the per-candidate slides are replaced by a store-style **Game library** grid of covers
-  (uploaded cover image, or a generated poster from the title), 12 per page, and the scoreboard
-  shows covers in place of photos. Public, no
+  mode the per-candidate slides are replaced by a store-style **Games** grid of covers (uploaded
+  cover image, or a generated poster from the title), 12 per page — the presenter can click any
+  cover to open the game in a new tab — and the scoreboard becomes a ranked leaderboard, one row
+  per game with its cover as an icon. Public, no
   login. Voters get a link to it after submitting. Only the tallies are exposed — admin routes
   still need the password.
 - **One vote per device** — on by default; toggle off for kiosk/shared-tablet voting.
