@@ -81,6 +81,63 @@ const api = async (path, { method = 'GET', body, token, cookie } = {}) => {
   });
   check('duplicate choices rejected', dupes.status === 400);
 
+  // ---- participant submissions (links mode) ----
+  await api('/api/settings', { method: 'PUT', body: { mode: 'links', submissionsOpen: true }, token });
+  const before = (await api('/api/results')).data.candidates.length;
+  const phone = crypto.randomUUID();
+  const sub = await api('/api/submit', {
+    method: 'POST', body: { name: 'Ann', game: 'Snake', link: 'https://example.com/snake', deviceId: phone }, cookie: phone
+  });
+  check('participant can submit a game link', sub.status === 201 && sub.data.link === 'https://example.com/snake',
+    `${sub.status} ${JSON.stringify(sub.data)}`);
+  const again = await api('/api/submit', {
+    method: 'POST', body: { name: 'Ann', game: 'Snake II', link: 'https://example.com/snake2', deviceId: phone }, cookie: phone
+  });
+  const afterList = (await api('/api/results')).data.candidates;
+  check('same device edits its entry instead of adding one',
+    again.status === 200 && again.data.id === sub.data.id && afterList.length === before + 1
+      && afterList.find(c => c.id === sub.data.id).game === 'Snake II',
+    `${again.status} count ${afterList.length}`);
+  const mine = await api('/api/poll?did=' + phone, { cookie: phone });
+  check("poll returns the device's own entry", mine.data.mine && mine.data.mine.id === sub.data.id);
+  const badUrl = await api('/api/submit', {
+    method: 'POST', body: { name: 'Bob', game: 'X', link: 'not a url', deviceId: crypto.randomUUID() }
+  });
+  check('bad link rejected', badUrl.status === 400);
+  const noGame = await api('/api/submit', {
+    method: 'POST', body: { name: 'Bob', game: '', link: 'https://x.y', deviceId: crypto.randomUUID() }
+  });
+  check('missing game name rejected', noGame.status === 400);
+  const voter = crypto.randomUUID();
+  const linkVote = await api('/api/vote', {
+    method: 'POST', body: { choices: [sub.data.id, ids[0]], deviceId: voter }, cookie: voter
+  });
+  check('link entries can be voted for', linkVote.status === 200, JSON.stringify(linkVote.data));
+  const res = await api('/api/results');
+  check('results carry mode, submit URL and game fields',
+    res.data.mode === 'links' && /\/submit$/.test(res.data.submitUrl)
+      && res.data.candidates.find(c => c.id === sub.data.id).link === 'https://example.com/snake2');
+  const adminList = await api('/api/admin/state', { token });
+  check('admin sees who was submitted from a phone',
+    adminList.data.candidates.find(c => c.id === sub.data.id).submitted === true);
+  await api('/api/settings', { method: 'PUT', body: { submissionsOpen: false }, token });
+  const closed = await api('/api/submit', {
+    method: 'POST', body: { name: 'C', game: 'G', link: 'https://x.y', deviceId: crypto.randomUUID() }
+  });
+  check('submissions can be closed', closed.status === 400);
+  const badMode = await api('/api/settings', { method: 'PUT', body: { mode: 'videos' }, token });
+  check('unknown mode rejected', badMode.status === 400);
+
+  // ---- pictures mode submission ----
+  await api('/api/settings', { method: 'PUT', body: { mode: 'pictures', submissionsOpen: true }, token });
+  const phone2 = crypto.randomUUID();
+  const noPhoto = await api('/api/submit', { method: 'POST', body: { name: 'Dee', deviceId: phone2 }, cookie: phone2 });
+  check('pictures mode requires a photo', noPhoto.status === 400);
+  const withPhoto = await api('/api/submit', {
+    method: 'POST', body: { name: 'Dee', photo: 'data:image/png;base64,iVBORw0KGgo=', deviceId: phone2 }, cookie: phone2
+  });
+  check('participant can submit a photo', withPhoto.status === 201 && withPhoto.data.photo.startsWith('data:image/'));
+
   check('admin routes need a token', (await api('/api/admin/state')).status === 401);
   check('public scoreboard needs no token', (await api('/api/results')).status === 200);
 

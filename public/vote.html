@@ -66,13 +66,29 @@ async function load() {
   }
   $('#rule').textContent = `Select exactly ${need} ${need === 1 ? 'choice' : 'choices'}, then submit.`;
 
+  const links = settings.mode === 'links';
+  if (links) $('#rule').insertAdjacentHTML('afterend',
+    '<p class="muted" style="margin-top:-8px">Tap ▶ Play to try a game first. Submitted one? <a href="/submit" style="color:var(--accent)">Edit it</a>.</p>');
+
   $('#grid').innerHTML = '';
   candidates.forEach(c => {
     const el = document.createElement('div');
     el.className = 'cand pick';
-    el.innerHTML = (c.photo ? `<img src="${c.photo}" alt="">` : `<div class="ph">👤</div>`) +
-                   `<div class="body"><b></b></div>`;
-    el.querySelector('b').textContent = c.name;
+    if (links) {
+      // Game name is the headline, the creator underneath, and a Play link that
+      // opens the game without toggling the selection.
+      el.innerHTML = `<div class="ph game">🎮</div>
+        <div class="body"><b></b><div class="muted by"></div>
+        <a class="play" target="_blank" rel="noopener">▶ Play</a></div>`;
+      el.querySelector('b').textContent = c.game || c.name;
+      el.querySelector('.by').textContent = 'by ' + c.name;
+      const a = el.querySelector('.play');
+      if (c.link) { a.href = c.link; a.onclick = e => e.stopPropagation(); } else a.remove();
+    } else {
+      el.innerHTML = (c.photo ? `<img src="${c.photo}" alt="">` : `<div class="ph">👤</div>`) +
+                     `<div class="body"><b></b></div>`;
+      el.querySelector('b').textContent = c.name;
+    }
     el.onclick = () => {
       if (picked.has(c.id)) picked.delete(c.id);
       else if (picked.size >= need) return flash(`You can only pick ${need}. Tap a selected one to remove it.`);

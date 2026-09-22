@@ -1,0 +1,128 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Submit</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .form { display: flex; flex-direction: column; gap: 14px; max-width: 460px; }
+  .form label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+  .form label[hidden] { display: none; }
+  .form input { width: 100%; }
+  .preview { width: 100%; max-width: 460px; aspect-ratio: 1/1; object-fit: cover; border-radius: 12px; background: #0b0d13; display: none; }
+  .qr { background: #fff; padding: 14px; border-radius: 12px; display: inline-grid; place-items: center; margin: 12px auto; }
+  .qr img, .qr canvas { width: 220px !important; height: 220px !important; }
+</style>
+
+<div class="wrap">
+  <h1 id="title">Loading…</h1>
+  <p class="muted" id="rule"></p>
+
+  <form class="form card" id="form" hidden>
+    <label>Your name <input id="fName" maxlength="60" required autocomplete="name"></label>
+    <label id="lGame" hidden>Game name <input id="fGame" maxlength="80"></label>
+    <label id="lLink" hidden>Link to play <input id="fLink" type="url" inputmode="url" placeholder="https://…"></label>
+    <label id="lPhoto" hidden>Photo <input id="fPhoto" type="file" accept="image/*"></label>
+    <img class="preview" id="preview" alt="">
+    <button id="submit">Submit</button>
+    <p id="msg" class="err" style="margin:0"></p>
+  </form>
+</div>
+
+<script src="/version.js"></script>
+<script src="/img.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+let mode = 'pictures', deviceId = '', mine = null, photo = '';
+
+// Same device id the vote page uses, so "one entry per device" and "one vote per
+// device" refer to the same phone.
+const store = {
+  get: () => { try { return localStorage.getItem('vdid') || ''; } catch { return ''; } },
+  set: v => { try { localStorage.setItem('vdid', v); } catch {} }
+};
+
+const done = (icon, head, sub, extra = '') => {
+  document.body.innerHTML =
+    `<div class="wrap" style="text-align:center;padding-top:60px">
+       <div style="font-size:64px">${icon}</div>
+       <h1>${head}</h1>
+       ${extra}
+       <p class="muted">${sub}</p>
+     </div>`;
+};
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+async function load() {
+  const r = await fetch('/api/poll?did=' + encodeURIComponent(store.get()), { cache: 'no-store' });
+  const data = await r.json();
+  if (buildWatch.changed(data.build)) return buildWatch.reload();
+  const { settings, deviceId: did } = data;
+  deviceId = did;
+  if (did && !store.get()) store.set(did);
+  mode = settings.mode;
+  mine = data.mine;
+  document.title = 'Submit — ' + settings.title;
+  $('#title').textContent = settings.title;
+
+  if (!settings.submissionsOpen) {
+    $('#rule').innerHTML = '<b class="err">Submissions are closed.</b>';
+    return;
+  }
+  const links = mode === 'links';
+  $('#rule').textContent = links
+    ? 'Enter your name, your game and the link to play it. Everyone will get a QR code to try it.'
+    : 'Enter your name and pick a photo to enter.';
+  $('#lGame').hidden = !links;
+  $('#lLink').hidden = !links;
+  $('#lPhoto').hidden = links;
+  $('#fGame').required = links;
+  $('#fLink').required = links;
+  $('#fPhoto').required = !links && !mine;
+
+  if (mine) {
+    $('#fName').value = mine.name;
+    $('#fGame').value = mine.game || '';
+    $('#fLink').value = mine.link || '';
+    if (mine.photo) { $('#preview').src = mine.photo; $('#preview').style.display = 'block'; }
+    $('#submit').textContent = 'Update my entry';
+    $('#rule').textContent += ' You already have an entry — you can change it here.';
+  }
+  $('#form').hidden = false;
+}
+
+$('#fPhoto').onchange = async () => {
+  const f = $('#fPhoto').files[0];
+  if (!f) return;
+  photo = await toDataUrl(f);
+  $('#preview').src = photo; $('#preview').style.display = 'block';
+};
+
+$('#form').onsubmit = async e => {
+  e.preventDefault();
+  $('#submit').disabled = true; $('#msg').textContent = '';
+  const body = { name: $('#fName').value, deviceId: store.get() || deviceId };
+  if (mode === 'links') { body.game = $('#fGame').value; body.link = $('#fLink').value; }
+  else body.photo = photo || (mine && mine.photo) || '';
+  const r = await fetch('/api/submit', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (!r.ok) { $('#msg').textContent = d.error; $('#submit').disabled = false; return; }
+  store.set(store.get() || deviceId);
+
+  const nav = `<p><a href="/vote" style="color:var(--accent)">Vote →</a> &nbsp;·&nbsp;
+               <a href="/projector" style="color:var(--accent)">See the projector →</a></p>`;
+  if (mode === 'links') {
+    done('🎮', 'You\'re in!', `<b>${esc(d.game)}</b> by ${esc(d.name)} is on the board.<br>This is the QR code others will scan to play.${nav}`,
+      '<div class="qr" id="qr"></div>');
+    if (window.QRCode) new QRCode($('#qr'), { text: d.link, width: 220, height: 220 });
+    else $('#qr').textContent = d.link;
+  } else {
+    done('📸', 'You\'re in!', `<b>${esc(d.name)}</b> is on the board.${nav}`,
+      `<img src="${d.photo}" alt="" style="width:220px;height:220px;object-fit:cover;border-radius:12px">`);
+  }
+};
+
+load();
+</script>

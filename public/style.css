@@ -55,6 +55,13 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 }
 .cand .ph { display: flex; align-items: center; justify-content: center; font-size: 34px; }
 .cand .body { padding: 10px 12px; }
+.cand .ph.game { aspect-ratio: 16/9; }
+.cand .by { font-size: 13px; }
+.cand .play {
+  display: inline-block; margin-top: 8px; padding: 6px 12px; border-radius: 8px;
+  background: var(--accent); color: #fff; font-weight: 600; text-decoration: none; font-size: 14px;
+}
+.badge { font-size: 11px; padding: 2px 7px; border-radius: 99px; background: #1f3a2a; color: #9df5c0; margin-left: 6px; white-space: nowrap; }
 .pick { cursor: pointer; position: relative; transition: .15s; }
 .pick.sel { outline: 3px solid var(--accent-2); outline-offset: -3px; }
 .pick.sel::after {

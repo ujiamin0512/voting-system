@@ -1,7 +1,9 @@
 # Voting System
 
 Admin-managed voting with photo candidates, a QR code for participants, device locking and a
-live scoreboard. Runs locally with no database, and deploys to Vercel with Postgres.
+live scoreboard. Participants can also submit their own entries — a photo, or a game link that
+becomes a QR code everyone scans to play before voting. Runs locally with no database, and
+deploys to Vercel with Postgres.
 
 ## Run locally
 
@@ -12,6 +14,7 @@ npm start
 
 - Admin: http://localhost:3000/ — password `admin123`
 - Voting: http://localhost:3000/vote
+- Submit an entry: http://localhost:3000/submit
 - Projector: http://localhost:3000/projector — public, no login needed (`/results` still works)
 
 In VS Code press **F5** instead, and pick a launch configuration. `npm run dev` restarts on
@@ -64,16 +67,26 @@ Every `git push` to `main` redeploys automatically.
 
 ## Admin features
 
-- **Poll settings** — title, how many votes each participant must cast, open/close voting.
-- **Candidates (full CRUD)** — add with name + photo, edit name/photo/vote count, delete.
+- **Poll settings** — title, how many votes each participant must cast, open/close voting,
+  what participants submit (**Pictures**: name + photo, or **Links**: name + game name + URL),
+  and whether submissions are open.
+- **Candidates (full CRUD)** — add with name + photo (or name + game + link in Links mode),
+  edit anything including the vote count, delete. Entries that came in from a phone carry a
+  📱 badge.
+- **Submit QR** — participants scan it to land on `/submit` and add their own entry. One entry
+  per device (same cookie as voting); submitting again from that phone edits it instead.
 - **Preview vote page** — see the ballot exactly as voters do, in a phone-sized frame; selections there are never recorded and never lock your device.
-- **Show QR code** — participants scan it to land straight on the voting page.
+- **Vote QR** — participants scan it to land straight on the voting page.
 - **Projector** — a full-screen slideshow for the big screen: one slide per candidate (photo
   above, name below), then a live side-by-side scoreboard ranked left to right. Fully manual:
   ← → / PageUp PageDown (presenter clickers), space or Enter for next, Home/End to jump to the
   first slide or the scoreboard, F for fullscreen, or tap the screen. The scoreboard slide
-  carries a permanent "Scan to vote" QR so latecomers can still join. Public, no login. Voters get a
-  link to it after submitting. Only the tallies are exposed — admin routes still need the password.
+  carries a permanent "Scan to vote" QR so latecomers can still join. While submissions are open
+  the deck starts with a "Scan to submit" slide (QR + live list of what has come in). In Links
+  mode the per-candidate slides are replaced by a "Scan to play" gallery — every game as a QR
+  tile, 12 per page — and the scoreboard shows each game's QR in place of a photo. Public, no
+  login. Voters get a link to it after submitting. Only the tallies are exposed — admin routes
+  still need the password.
 - **One vote per device** — on by default; toggle off for kiosk/shared-tablet voting.
 - **Clear device locks** — lets everyone vote again without touching the tally.
 - **Reset all votes** — zeroes every candidate, clears ballots and device locks.
@@ -91,6 +104,17 @@ Every API response carries the running build id. A tab left open across a deploy
 mismatch and handles it per page: the scoreboard reloads itself silently, the vote page
 reloads only while no selection is in progress, and the admin panel shows a "newer version"
 banner with a Reload button rather than interrupting an edit.
+
+## Links mode (game jams, demos)
+
+1. Admin sets **Participants submit → Links** and shows the Submit QR (or the projector's first slide).
+2. Participants scan, enter their name, game name and a link to play it. They get a QR of their
+   link straight away; the projector's gallery slide shows everyone's.
+3. Others scan a game's QR to play it, then vote on `/vote`, where each card has a ▶ Play button.
+4. Same ballot rules, device locking and scoreboard as picture voting.
+
+The link must be an `http(s)` URL. The projector encodes it as-is, so it should be publicly
+reachable from the participants' phones.
 
 ## Voting rules
 

@@ -35,7 +35,8 @@
       </div>
       <div class="row">
         <button class="ghost" id="previewBtn">Preview vote page</button>
-        <button class="ghost" id="qrBtn">Show QR code</button>
+        <button class="ghost" id="qrBtn">Vote QR</button>
+        <button class="ghost" id="subQrBtn">Submit QR</button>
         <button class="ghost" id="resBtn">Projector</button>
         <button class="ghost" id="outBtn">Log out</button>
       </div>
@@ -47,6 +48,13 @@
       <label>Votes each participant must cast <input id="sVotes" type="number" min="1" style="width:90px"></label>
       <label class="row" style="gap:6px"><input id="sOpen" type="checkbox"> Voting open</label>
       <label class="row" style="gap:6px"><input id="sLock" type="checkbox"> One vote per device</label>
+      <label>Participants submit
+        <select id="sMode">
+          <option value="pictures">Pictures (name + photo)</option>
+          <option value="links">Links (name + game + URL)</option>
+        </select>
+      </label>
+      <label class="row" style="gap:6px"><input id="sSubs" type="checkbox"> Submissions open</label>
       <button id="saveSet">Save</button>
       <span id="setMsg" class="ok"></span>
     </div>
@@ -54,6 +62,8 @@
     <h2>Add candidate</h2>
     <div class="card row">
       <input id="cName" placeholder="Name" style="flex:1;min-width:180px">
+      <input id="cGame" placeholder="Game name" style="flex:1;min-width:160px" hidden>
+      <input id="cLink" placeholder="https://link-to-play" style="flex:2;min-width:220px" hidden>
       <input id="cPhoto" type="file" accept="image/*">
       <button id="addBtn">Add</button>
       <span id="addMsg" class="err"></span>
@@ -62,7 +72,7 @@
     <h2>Candidates <span class="muted" id="count"></span></h2>
     <div class="card">
       <table>
-        <thead><tr><th style="width:64px">Photo</th><th>Name</th><th style="width:80px">Votes</th><th style="width:190px"></th></tr></thead>
+        <thead id="head"></thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="row" style="margin-top:14px">
@@ -88,7 +98,7 @@
 </dialog>
 
 <dialog id="qrDlg">
-  <h2 style="margin-top:0">Scan to vote</h2>
+  <h2 style="margin-top:0" id="qrHead">Scan to vote</h2>
   <div id="qr" style="background:#fff;padding:14px;border-radius:10px;display:grid;place-items:center;min-height:240px"></div>
   <p class="muted" id="qrUrl" style="word-break:break-all"></p>
   <p class="muted" id="qrNote"></p>
@@ -96,11 +106,12 @@
 </dialog>
 
 <script src="/version.js"></script>
+<script src="/img.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 let token = localStorage.getItem('vtoken') || '';
-let voteUrl = '';
+let voteUrl = '', submitUrl = '', mode = 'pictures';
 
 const api = async (path, opts = {}) => {
   const r = await fetch(path, {
@@ -132,13 +143,22 @@ async function load() {
   const s = await api('/api/admin/state');
   // The admin may be mid-edit, so this offers a reload instead of forcing one.
   if (buildWatch.changed(s.build)) $('#newBuild').hidden = false;
-  voteUrl = s.voteUrl;
+  voteUrl = s.voteUrl; submitUrl = s.submitUrl;
+  mode = s.settings.mode;
+  const links = mode === 'links';
   $('#sTitle').value = s.settings.title;
   $('#sVotes').value = s.settings.votesPerVoter;
   $('#sOpen').checked = s.settings.open;
   $('#sLock').checked = s.settings.oneVotePerDevice;
+  $('#sMode').value = mode;
+  $('#sSubs').checked = s.settings.submissionsOpen;
+  // The add form and the table follow the mode.
+  $('#cGame').hidden = !links; $('#cLink').hidden = !links; $('#cPhoto').hidden = links;
+  $('#head').innerHTML = links
+    ? '<tr><th>Name</th><th>Game</th><th>Link</th><th style="width:80px">Votes</th><th style="width:170px"></th></tr>'
+    : '<tr><th style="width:64px">Photo</th><th>Name</th><th style="width:80px">Votes</th><th style="width:190px"></th></tr>';
   $('#count').textContent = `(${s.candidates.length})`;
-  $('#stat').textContent = `${s.ballotCount} ballot(s) submitted · ${s.lockedDevices} device lock(s) · voting ${s.settings.open ? 'OPEN' : 'CLOSED'} · storage: ${s.storage}`;
+  $('#stat').textContent = `${links ? 'Links' : 'Pictures'} mode · ${s.ballotCount} ballot(s) submitted · ${s.lockedDevices} device lock(s) · voting ${s.settings.open ? 'OPEN' : 'CLOSED'} · submissions ${s.settings.submissionsOpen ? 'OPEN' : 'CLOSED'} · storage: ${s.storage}`;
   const noDb = s.storage === 'none';
   $('#dbWarn').hidden = !noDb;
   if (noDb) {
@@ -153,11 +173,39 @@ async function load() {
 
 function rowFor(c) {
   const tr = document.createElement('tr');
+  const badge = c.submitted ? '<span class="badge" title="Submitted by a participant">📱 phone</span>' : '';
+  const q = v => String(v || '').replace(/"/g, '&quot;');
+  if (mode === 'links') {
+    tr.innerHTML = `<td><input value="${q(c.name)}" data-name style="width:100%">${badge}</td>
+      <td><input value="${q(c.game)}" data-game style="width:100%"></td>
+      <td><div class="row" style="flex-wrap:nowrap"><input value="${q(c.link)}" data-link style="flex:1;min-width:120px">
+        ${c.link ? `<a href="${q(c.link)}" target="_blank" rel="noopener" style="color:var(--accent)" title="Open">↗</a>` : ''}</div></td>
+      <td><input type="number" min="0" value="${c.votes}" data-votes style="width:70px"></td>
+      <td class="row">
+        <button data-save>Save</button>
+        <button class="danger" data-del>Delete</button>
+      </td>`;
+    tr.querySelector('[data-save]').onclick = async () => {
+      try {
+        await api('/api/candidates/' + c.id, { method: 'PUT', body: JSON.stringify({
+          name: tr.querySelector('[data-name]').value, game: tr.querySelector('[data-game]').value,
+          link: tr.querySelector('[data-link]').value, votes: +tr.querySelector('[data-votes]').value
+        })});
+        load();
+      } catch (e) { alert(e.message); }
+    };
+    tr.querySelector('[data-del]').onclick = async () => {
+      if (!confirm(`Delete "${c.game || c.name}"?`)) return;
+      await api('/api/candidates/' + c.id, { method: 'DELETE' });
+      load();
+    };
+    return tr;
+  }
   const img = c.photo
     ? `<img src="${c.photo}" style="width:48px;height:48px;object-fit:cover;border-radius:8px">`
     : `<div style="width:48px;height:48px;border-radius:8px;background:#0b0d13;display:grid;place-items:center">👤</div>`;
   tr.innerHTML = `<td>${img}</td>
-    <td><input value="${c.name.replace(/"/g, '&quot;')}" data-name style="width:100%"></td>
+    <td><input value="${c.name.replace(/"/g, '&quot;')}" data-name style="width:100%">${badge}</td>
     <td><input type="number" min="0" value="${c.votes}" data-votes style="width:70px"></td>
     <td class="row">
       <input type="file" accept="image/*" data-file style="width:104px">
@@ -179,34 +227,13 @@ function rowFor(c) {
   return tr;
 }
 
-// Downscale before upload: phone photos are several MB and Vercel rejects
-// request bodies over 4.5 MB.
-const MAX_PX = 640;
-const toDataUrl = file => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onerror = reject;
-  reader.onload = () => {
-    const img = new Image();
-    img.onerror = () => resolve(reader.result); // not decodable? send as-is
-    img.onload = () => {
-      const scale = Math.min(1, MAX_PX / Math.max(img.width, img.height));
-      const cv = document.createElement('canvas');
-      cv.width = Math.round(img.width * scale);
-      cv.height = Math.round(img.height * scale);
-      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-      resolve(cv.toDataURL('image/jpeg', 0.82));
-    };
-    img.src = reader.result;
-  };
-  reader.readAsDataURL(file);
-});
-
 // --- actions ---
 $('#saveSet').onclick = async () => {
   try {
     await api('/api/settings', { method: 'PUT', body: JSON.stringify({
       title: $('#sTitle').value, votesPerVoter: $('#sVotes').value,
-      open: $('#sOpen').checked, oneVotePerDevice: $('#sLock').checked
+      open: $('#sOpen').checked, oneVotePerDevice: $('#sLock').checked,
+      mode: $('#sMode').value, submissionsOpen: $('#sSubs').checked
     })});
     $('#setMsg').textContent = 'Saved'; setTimeout(() => $('#setMsg').textContent = '', 1500);
     load();
@@ -216,11 +243,11 @@ $('#saveSet').onclick = async () => {
 $('#addBtn').onclick = async () => {
   $('#addMsg').textContent = '';
   try {
-    const f = $('#cPhoto').files[0];
-    await api('/api/candidates', { method: 'POST', body: JSON.stringify({
-      name: $('#cName').value, photo: f ? await toDataUrl(f) : ''
-    })});
-    $('#cName').value = ''; $('#cPhoto').value = '';
+    const body = { name: $('#cName').value };
+    if (mode === 'links') { body.game = $('#cGame').value; body.link = $('#cLink').value; }
+    else { const f = $('#cPhoto').files[0]; body.photo = f ? await toDataUrl(f) : ''; }
+    await api('/api/candidates', { method: 'POST', body: JSON.stringify(body) });
+    $('#cName').value = ''; $('#cPhoto').value = ''; $('#cGame').value = ''; $('#cLink').value = '';
     load();
   } catch (e) { $('#addMsg').textContent = e.message; }
 };
@@ -244,17 +271,20 @@ $('#previewBtn').onclick = () => { $('#prevFrame').src = PREVIEW_URL; prevDlg.sh
 $('#prevReload').onclick = () => { $('#prevFrame').src = PREVIEW_URL + '&t=' + Date.now(); };
 $('#prevTab').onclick = () => window.open(PREVIEW_URL, '_blank');
 
-$('#qrBtn').onclick = () => {
+function showQr(head, url) {
+  $('#qrHead').textContent = head;
   $('#qr').innerHTML = '';
-  $('#qrUrl').textContent = voteUrl;
+  $('#qrUrl').textContent = url;
   // A public https link works from any network; a LAN address does not.
-  $('#qrNote').textContent = /^https:/.test(voteUrl)
+  $('#qrNote').textContent = /^https:/.test(url)
     ? 'Works on any network, including mobile data.'
     : 'Local address — participants must be on the same Wi-Fi. For a public link, open this admin page on your deployed site instead.';
-  if (window.QRCode) new QRCode($('#qr'), { text: voteUrl, width: 240, height: 240 });
+  if (window.QRCode) new QRCode($('#qr'), { text: url, width: 240, height: 240 });
   else $('#qr').innerHTML = '<span style="color:#333">QR library offline — share the link below.</span>';
   qrDlg.showModal();
-};
+}
+$('#qrBtn').onclick = () => showQr('Scan to vote', voteUrl);
+$('#subQrBtn').onclick = () => showQr(mode === 'links' ? 'Scan to submit your game' : 'Scan to submit your photo', submitUrl);
 
 // load() only runs after an action, so a quiet admin tab would not notice a deploy.
 // /api/results is small and public, which makes it a cheap heartbeat.

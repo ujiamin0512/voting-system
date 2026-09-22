@@ -60,6 +60,36 @@
   .qrpanel .lbl { font-weight: 800; font-size: clamp(14px, 2.6vh, 26px); letter-spacing: .02em; }
   .qrpanel .url { font-size: clamp(10px, 1.5vh, 14px); color: #555; max-width: min(26vh, 16vw); word-break: break-all; text-align: center; }
 
+  .lane .by { color: var(--muted); font-size: clamp(13px, 2.2vh, 22px); margin-top: -.8vh; }
+  .lane .pic.qr { background: #fff; padding: 4%; }
+  .lane .pic.qr img, .lane .pic.qr canvas { width: 100% !important; height: 100% !important; }
+
+  /* --- submit slide: big QR + live list of what has come in --- */
+  .submit { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 2vh; }
+  .submit .title { font-size: clamp(28px, 5.5vh, 64px); font-weight: 800; text-align: center; }
+  .submit .meta  { color: var(--muted); text-align: center; font-size: clamp(14px, 2.2vh, 22px); }
+  .submit .body { flex: 1; display: flex; gap: 3vw; align-items: center; justify-content: center; min-height: 0; }
+  .submit .qrpanel { margin: 0; }
+  .submit .qrpanel .code { width: min(50vh, 30vw); height: min(50vh, 30vw); }
+  .submit .qrpanel .url { max-width: min(50vh, 30vw); font-size: clamp(12px, 2vh, 20px); }
+  .submitlist { flex: 0 1 40vw; max-height: 60vh; overflow: hidden; display: flex; flex-direction: column; gap: 1vh; }
+  .submitlist .h { color: var(--muted); font-size: clamp(14px, 2.2vh, 22px); text-transform: uppercase; letter-spacing: .15em; }
+  .submitlist .it { font-size: clamp(16px, 3vh, 34px); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .submitlist .it span { color: var(--muted); font-weight: 500; font-size: .75em; }
+
+  /* --- gallery: every game as a scannable QR tile --- */
+  .gallery { width: 100%; height: 100%; display: flex; flex-direction: column; gap: 2vh; }
+  .gallery .title { font-size: clamp(24px, 4.5vh, 52px); font-weight: 800; text-align: center; }
+  .tiles { flex: 1; display: grid; gap: 2vh 1.5vw; align-content: center; justify-content: center; min-height: 0;
+           grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); }
+  .tile { background: #fff; color: #111; border-radius: 18px; padding: 1.4vh 1vw; display: flex; flex-direction: column;
+          align-items: center; gap: .8vh; box-shadow: 0 16px 40px rgba(0,0,0,.5); min-width: 0; }
+  .tile .code { width: 100%; aspect-ratio: 1 / 1; max-height: var(--qr, 26vh); }
+  .tile .code img, .tile .code canvas { width: 100% !important; height: 100% !important; }
+  .tile .g { font-weight: 800; font-size: clamp(13px, 2.4vh, 26px); text-align: center; line-height: 1.15; max-width: 100%;
+             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile .b { color: #555; font-size: clamp(11px, 1.7vh, 18px); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   /* --- chrome --- */
   .hud {
     position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 18px;
@@ -100,14 +130,32 @@ const POLL_MS       = 1200;   // scoreboard refresh
 const photos = new Map();
 let data = null;          // latest /api/results
 let order = [];           // candidate ids in slide order (creation order, stable)
-let current = 0;          // slide index; order.length === scoreboard slide
+let current = 0;          // slide index; the scoreboard is always the last slide
 let lastBoardPaint = '';
+let slideShape = '';      // fingerprint of what the slide deck was built from
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const pic = (id, cls) => {
   const p = photos.get(id);
   return p ? `<img class="${cls}" src="${p}" alt="">` : `<div class="${cls}">👤</div>`;
 };
+const links = () => data && data.mode === 'links';
+const GALLERY_PER_SLIDE = 12;
+
+// qrcodejs draws into a live element, so QR tiles are emitted as empty boxes tagged
+// with their URL and filled in once the markup is in the document.
+const qrBox = (url, cls) => url
+  ? `<div class="${cls}" data-qr="${esc(url).replace(/"/g, '&quot;')}"></div>`
+  : `<div class="${cls}" style="display:grid;place-items:center;font-size:3em">🎮</div>`;
+function fillQrs(root) {
+  root.querySelectorAll('[data-qr]').forEach(el => {
+    const url = el.dataset.qr;
+    if (el.dataset.drawn === url) return;
+    el.innerHTML = ''; el.dataset.drawn = url;
+    if (window.QRCode) new QRCode(el, { text: url, width: 512, height: 512, correctLevel: QRCode.CorrectLevel.M });
+    else el.textContent = url;
+  });
+}
 
 // ---------------------------------------------------------------- data
 async function fetchResults(withPhotos) {
@@ -126,9 +174,11 @@ async function poll(withPhotos = false) {
     // Candidate added since the last full fetch, or the set changed: rebuild slides.
     if (s.candidates.some(c => !photos.has(c.id))) return poll(true);
     const ids = s.candidates.map(c => c.id);
-    const changed = ids.join() !== order.join();
+    // Mode, submissions toggle and edited links all change what the slides show.
+    const shape = [s.mode, s.submissionsOpen, ...s.candidates.map(c => c.id + ':' + c.name + ':' + c.game + ':' + c.link)].join('|');
+    const changed = shape !== slideShape;
     data = s;
-    if (changed) { order = ids; buildSlides(); }
+    if (changed) { order = ids; slideShape = shape; buildSlides(); }
     else paintBoard();
     $('#dot').textContent = '● live'; $('#dot').style.color = 'var(--accent-2)';
   } catch (e) {
@@ -138,37 +188,71 @@ async function poll(withPhotos = false) {
 }
 
 // ---------------------------------------------------------------- slides
+function slide(html) {
+  const el = document.createElement('section');
+  el.className = 'slide';
+  el.innerHTML = html;
+  $('#stage').append(el);
+  fillQrs(el);
+  return el;
+}
+
 function buildSlides() {
   const stage = $('#stage');
   stage.innerHTML = '';
-  order.forEach((id, i) => {
-    const c = data.candidates.find(x => x.id === id);
-    const el = document.createElement('section');
-    el.className = 'slide';
-    el.innerHTML = `<div class="hero">
-      ${pic(id, 'pic')}
+  const list = order.map(id => data.candidates.find(x => x.id === id));
+
+  // 1. "Scan to submit" — while submissions are open, in either mode.
+  if (data.submissionsOpen) {
+    slide(`<div class="submit">
+      <div class="title">${links() ? '🎮 Submit your game' : '📸 Submit your photo'}</div>
+      <div class="meta">${links() ? 'Scan, enter your name, your game and the link to play it.' : 'Scan, enter your name and pick a photo.'}</div>
+      <div class="body">
+        <div class="qrpanel">${qrBox(data.submitUrl, 'code')}<div class="lbl">📱 Scan to submit</div><div class="url">${esc(data.submitUrl.replace(/^https?:\/\//, ''))}</div></div>
+        <div class="submitlist"><div class="h">Submitted so far</div><div id="subList"></div></div>
+      </div>
+    </div>`);
+  }
+
+  if (links()) {
+    // 2. Gallery pages: every game as a QR tile so the whole room can scan and play.
+    const pages = Math.max(1, Math.ceil(list.length / GALLERY_PER_SLIDE));
+    for (let pg = 0; pg < pages; pg++) {
+      const chunk = list.slice(pg * GALLERY_PER_SLIDE, (pg + 1) * GALLERY_PER_SLIDE);
+      const cols = Math.min(6, Math.max(2, Math.ceil(Math.sqrt(chunk.length * 1.6))));
+      const rows = Math.ceil(chunk.length / cols) || 1;
+      slide(`<div class="gallery">
+        <div class="title">🎮 Scan to play${pages > 1 ? ` · ${pg + 1} / ${pages}` : ''}</div>
+        <div class="tiles" style="--cols:${cols};--qr:${Math.floor(60 / rows)}vh">${chunk.map(c => `
+          <div class="tile">${qrBox(c.link, 'code')}<div class="g">${esc(c.game || c.name)}</div><div class="b">by ${esc(c.name)}</div></div>`).join('')
+          || '<p class="muted">No games submitted yet.</p>'}</div>
+      </div>`);
+    }
+  } else {
+    // 2. One photo per slide.
+    list.forEach((c, i) => slide(`<div class="hero">
+      ${pic(c.id, 'pic')}
       <div class="name">${esc(c.name)}</div>
-      <div class="idx">${i + 1} / ${order.length}</div>
-    </div>`;
-    stage.append(el);
-  });
-  const board = document.createElement('section');
-  board.className = 'slide';
-  board.innerHTML = `<div class="board">
+      <div class="idx">${i + 1} / ${list.length}</div>
+    </div>`));
+  }
+
+  // 3. Scoreboard, always last.
+  slide(`<div class="board">
     <div class="title" id="bTitle"></div>
     <div class="meta" id="bMeta"></div>
     <div class="lanes" id="lanesRow">
       <div class="lanes" id="lanes" style="flex:1"></div>
       <div class="qrpanel" id="qrpanel"><div class="code" id="qrcode"></div><div class="lbl">📱 Scan to vote</div><div class="url" id="qrurl"></div></div>
     </div>
-  </div>`;
+  </div>`);
   drawQr();
-  stage.append(board);
 
-  $('#dots').innerHTML = Array.from({ length: order.length + 1 }, () => '<i></i>').join('');
+  const n = document.querySelectorAll('.slide').length;
+  $('#dots').innerHTML = Array.from({ length: n }, () => '<i></i>').join('');
   lastBoardPaint = '';
   paintBoard();
-  if (current > order.length) current = order.length;
+  if (current > n - 1) current = n - 1;
   show(current);
 }
 
@@ -199,15 +283,23 @@ function paintBoard() {
     `${data.ballotCount} ballot(s) · ${total} vote(s) · voting ${data.open ? 'OPEN' : 'CLOSED'}`;
 
   // Ranked left → right. Widths shrink as the field grows so everything stays on screen.
+  // In links mode the picture slot holds the game's QR so it can still be scanned here.
   $('#lanes').innerHTML = list.map((c, i) => `
     <div class="lane ${i === 0 && c.votes > 0 ? 'lead' : ''}">
       <div class="medal">${c.votes > 0 ? (['🥇', '🥈', '🥉'][i] || '') : ''}</div>
-      ${pic(c.id, 'pic')}
-      <div class="name">${esc(c.name)}</div>
+      ${links() ? qrBox(c.link, 'pic qr') : pic(c.id, 'pic')}
+      <div class="name">${esc(links() ? (c.game || c.name) : c.name)}</div>
+      ${links() ? `<div class="by">by ${esc(c.name)}</div>` : ''}
       <div class="count">${c.votes}</div>
       <div class="pct">${total ? Math.round(c.votes / total * 100) : 0}%</div>
       <div class="track"><i style="width:${c.votes / max * 100}%"></i></div>
     </div>`).join('') || '<p class="muted">No candidates yet.</p>';
+  fillQrs($('#lanes'));
+
+  const sub = $('#subList');
+  if (sub) sub.innerHTML = [...data.candidates].reverse().slice(0, 12).map(c => links()
+    ? `<div class="it">${esc(c.game || c.name)} <span>by ${esc(c.name)}</span></div>`
+    : `<div class="it">${esc(c.name)}</div>`).join('') || '<div class="it"><span>Nothing yet — be the first!</span></div>';
 }
 
 // ---------------------------------------------------------------- navigation
@@ -236,7 +328,7 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp') prev();
   else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); next(); }
   else if (e.key.toLowerCase() === 'f') $('#full').click();
-  else if (e.key === 'End') show(order.length);
+  else if (e.key === 'End') show(document.querySelectorAll('.slide').length - 1);
   else if (e.key === 'Home') show(0);
 });
 

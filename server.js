@@ -47,6 +47,7 @@ http.createServer(async (req, res) => {
   try {
     if (url.pathname.startsWith('/api/')) return await handleApi(req, res, url);
     if (url.pathname === '/vote') return serveStatic(res, '/vote.html');
+    if (url.pathname === '/submit') return serveStatic(res, '/submit.html');
     if (url.pathname === '/projector' || url.pathname === '/results') return serveStatic(res, '/projector.html');
     serveStatic(res, url.pathname);
   } catch (e) {
@@ -56,5 +57,6 @@ http.createServer(async (req, res) => {
   console.log(`\n  Voting system running  (storage: ${store.kind})`);
   console.log(`  Admin   : http://localhost:${PORT}/`);
   console.log(`  Voting  : http://${lanAddress()}:${PORT}/vote`);
+  console.log(`  Submit  : http://${lanAddress()}:${PORT}/submit`);
   console.log(`  Password: ${process.env.ADMIN_PASSWORD || 'admin123'}\n`);
 });
