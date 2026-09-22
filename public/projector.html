@@ -216,7 +216,7 @@ async function poll(withPhotos = false) {
     if (s.candidates.some(c => !photos.has(c.id) || photos.get(c.id).length !== c.photoLen)) return poll(true);
     const ids = s.candidates.map(c => c.id);
     // Mode, submissions toggle and edited links all change what the slides show.
-    const shape = [s.mode, s.submissionsOpen, ...s.candidates.map(c => c.id + ':' + c.name + ':' + c.game + ':' + c.link + ':' + c.photoLen)].join('|');
+    const shape = [s.mode, s.submissionsOpen, ...s.candidates.map(c => c.id + ':' + c.name + ':' + c.game + ':' + c.link + ':' + c.preview + ':' + c.photoLen)].join('|');
     const changed = shape !== slideShape;
     data = s;
     if (changed) { order = ids; slideShape = shape; buildSlides(); }
