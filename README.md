@@ -3,7 +3,7 @@
 Admin-managed voting with photo candidates, a QR code for participants, device locking and a
 live scoreboard. Participants can also submit their own entries — a photo, or a game link that
 becomes a QR code everyone scans to play before voting. Runs locally with no database, and
-deploys to Vercel with Postgres.
+deploys to Vercel with Supabase Postgres.
 
 ## Run locally
 
@@ -27,7 +27,7 @@ The backend is chosen automatically:
 | Environment | Condition | Storage |
 |---|---|---|
 | Local | `DATABASE_URL` unset | `data.json` in the project folder |
-| Vercel | `DATABASE_URL` set | Postgres (tables created on first request) |
+| Vercel | `DATABASE_URL` set | Supabase Postgres (tables created on first request) |
 
 The admin status line shows which one is live. Vercel's filesystem is ephemeral, so a
 database is **required** there — without one, votes disappear between requests.
@@ -39,15 +39,18 @@ environment variables were found (names only, never values).
 
 - `"storage":"none"` — no database is connected; the admin panel shows a red banner and
   writes fail with instructions instead of a confusing `EROFS: read-only file system`.
-  Connect Neon in the Storage tab, then **redeploy** — env vars only apply to new builds.
+  Add `DATABASE_URL` (see below), then **redeploy** — env vars only apply to new builds.
 - `"storage":"postgres"` — connected and working.
 
 ## Deploy to Vercel
 
 1. Push this repo to GitHub (already wired to `ujiamin0512/voting-system`).
 2. On [vercel.com](https://vercel.com/new) → **Import** the repo → **Deploy**.
-3. In the project → **Storage** → **Create Database** → **Neon Postgres** → Connect.
-   Vercel injects `DATABASE_URL` automatically. (Any Postgres URL works — Supabase too.)
+3. Create a project on [supabase.com](https://supabase.com/dashboard), then **Connect** →
+   copy the **Transaction pooler** string (port `6543`) and fill in the database password.
+   The direct connection is IPv6-only and Vercel can't reach it, so use the pooler.
+   In Vercel → **Settings → Environment Variables** add it as `DATABASE_URL`
+   (Production, Preview and Development).
 4. In **Settings → Environment Variables** add:
    - `ADMIN_PASSWORD` — your admin password (do not leave the default)
    - `SESSION_SECRET` — any long random string
@@ -61,7 +64,7 @@ Every `git push` to `main` redeploys automatically.
 |---|---|---|
 | `ADMIN_PASSWORD` | `admin123` | Admin login |
 | `SESSION_SECRET` | derived from the password | Signs admin tokens |
-| `DATABASE_URL` | unset | Postgres connection string; enables the database backend |
+| `DATABASE_URL` | unset | Supabase (or any Postgres) connection string; enables the database backend |
 | `PORT` | `3000` | Local port |
 | `HOST_IP` | auto-detected | Overrides the LAN IP used in the local QR code |
 
