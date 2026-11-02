@@ -59,6 +59,19 @@
       <span id="setMsg" class="ok"></span>
     </div>
 
+    <h2>Submission form <span class="muted" id="formMode" style="font-weight:400"></span></h2>
+    <div class="card">
+      <p class="muted" style="margin:0 0 10px">What participants see on the submit page. Rename any field and tick which ones must be filled in.</p>
+      <table>
+        <thead><tr><th style="width:120px">Field</th><th>Label shown to participants</th><th style="width:100px">Required</th></tr></thead>
+        <tbody id="formRows"></tbody>
+      </table>
+      <div class="row" style="margin-top:14px">
+        <button id="saveForm">Save form</button>
+        <span id="formMsg" class="ok"></span>
+      </div>
+    </div>
+
     <h2>Add candidate</h2>
     <div class="card row">
       <input id="cName" placeholder="Name" style="flex:1;min-width:180px">
@@ -112,7 +125,7 @@
 <script>
 const $ = s => document.querySelector(s);
 let token = localStorage.getItem('vtoken') || '';
-let voteUrl = '', submitUrl = '', mode = 'pictures', candidates = [];
+let voteUrl = '', submitUrl = '', mode = 'pictures', candidates = [], form = null;
 
 const api = async (path, opts = {}) => {
   const r = await fetch(path, {
@@ -152,6 +165,8 @@ async function load() {
   $('#sOpen').checked = s.settings.open;
   $('#sLock').checked = s.settings.oneVotePerDevice;
   $('#sMode').value = mode;
+  form = s.settings.form;
+  renderForm();
   $('#sSubs').checked = s.settings.submissionsOpen;
   // The add form and the table follow the mode.
   $('#cGame').hidden = !links; $('#cLink').hidden = !links; $('#cPhoto').title = links ? 'Cover image (optional)' : 'Photo';
@@ -237,6 +252,36 @@ function rowFor(c) {
 }
 
 // --- actions ---
+// --- submission form fields ---
+// Shows the fields for the mode picked in Poll settings; edits to the other mode's
+// fields are kept in `form` and saved together.
+const FIELD_NAMES = { name: 'Name', game: 'Game name', link: 'Link', photo: mode => mode === 'links' ? 'Cover image' : 'Photo' };
+function renderForm() {
+  const md = $('#sMode').value;
+  $('#formMode').textContent = `· ${md === 'links' ? 'Links' : 'Pictures'} mode`;
+  $('#formRows').innerHTML = '';
+  for (const [key, f] of Object.entries(form[md])) {
+    const tr = document.createElement('tr');
+    const field = typeof FIELD_NAMES[key] === 'function' ? FIELD_NAMES[key](md) : FIELD_NAMES[key];
+    tr.innerHTML = `<td><b></b></td><td><input maxlength="60" style="width:100%"></td>
+      <td><label class="row" style="gap:6px;flex-wrap:nowrap;white-space:nowrap"><input type="checkbox"> Required</label></td>`;
+    tr.querySelector('b').textContent = field;
+    const label = tr.querySelector('input:not([type])'), req = tr.querySelector('[type=checkbox]');
+    label.value = f.label; req.checked = f.required;
+    label.oninput = () => { f.label = label.value; };
+    req.onchange = () => { f.required = req.checked; };
+    $('#formRows').append(tr);
+  }
+}
+$('#sMode').addEventListener('change', renderForm);
+$('#saveForm').onclick = async () => {
+  try {
+    await api('/api/settings', { method: 'PUT', body: JSON.stringify({ form }) });
+    $('#formMsg').textContent = 'Saved'; setTimeout(() => $('#formMsg').textContent = '', 1500);
+    load();
+  } catch (e) { alert(e.message); }
+};
+
 $('#saveSet').onclick = async () => {
   try {
     await api('/api/settings', { method: 'PUT', body: JSON.stringify({

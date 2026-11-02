@@ -73,6 +73,10 @@ Every `git push` to `main` redeploys automatically.
 - **Poll settings** — title, how many votes each participant must cast, open/close voting,
   what participants submit (**Pictures**: name + photo, or **Links**: name + game name + URL),
   and whether submissions are open.
+- **Submission form** — rename each field participants fill in (name, game, link, photo /
+  cover) and tick or untick whether it is required. Applies to the mode picked in Poll settings;
+  the server enforces the same rules. An empty name is saved as "Anonymous".
+- **Delete all submissions** — removes every 📱 entry in one go; candidates the admin added stay.
 - **Candidates (full CRUD)** — add with name + photo (or name + game + link in Links mode),
   edit anything including the vote count, delete. Entries that came in from a phone carry a
   📱 badge.

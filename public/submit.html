@@ -114,9 +114,9 @@
   <p class="muted" id="rule"></p>
 
   <form class="form card" id="form" hidden>
-    <label>Your name <input id="fName" maxlength="60" required autocomplete="name"></label>
-    <label id="lGame" hidden>Game name <input id="fGame" maxlength="80"></label>
-    <label id="lLink" hidden>Link to play <input id="fLink" type="url" inputmode="url" placeholder="https://…"></label>
+    <label id="lName"><span id="lNameTxt">Your name</span> <input id="fName" maxlength="60" autocomplete="name"></label>
+    <label id="lGame" hidden><span id="lGameTxt">Game name</span> <input id="fGame" maxlength="80"></label>
+    <label id="lLink" hidden><span id="lLinkTxt">Link to play</span> <input id="fLink" type="url" inputmode="url" placeholder="https://…"></label>
     <label id="lPhoto" hidden><span id="lPhotoTxt">Photo</span> <input id="fPhoto" type="file" accept="image/*"></label>
     <img class="preview" id="preview" alt="">
     <button id="submit">Submit</button>
@@ -201,16 +201,19 @@ async function load() {
     return;
   }
   const links = mode === 'links';
-  $('#rule').textContent = links
-    ? 'Enter your name, your game and the link to play it. A cover image makes it stand out in the library.'
-    : 'Enter your name and pick a photo to enter.';
+  $('#rule').textContent = 'Fill in the details below to enter. Fields marked (optional) can be left empty.';
   $('#lGame').hidden = !links;
   $('#lLink').hidden = !links;
   $('#lPhoto').hidden = false;
-  $('#lPhotoTxt').textContent = links ? 'Cover image (optional)' : 'Photo';
-  $('#fGame').required = links;
-  $('#fLink').required = links;
-  $('#fPhoto').required = !links && !mine;
+  // Labels and which fields are required come from the admin's form settings.
+  const form = settings.form[mode];
+  for (const [key, id] of [['name', 'Name'], ['game', 'Game'], ['link', 'Link'], ['photo', 'Photo']]) {
+    const f = form[key];
+    if (!f) continue;
+    $('#l' + id + 'Txt').innerHTML = esc(f.label) + (f.required ? '' : ' <span class="muted" style="font-weight:400">(optional)</span>');
+    // An existing entry already has its photo, so the file picker can stay empty.
+    $('#f' + id).required = f.required && !(key === 'photo' && mine && mine.photo);
+  }
 
   if (mine) {
     $('#fName').value = mine.name;

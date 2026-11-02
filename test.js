@@ -138,6 +138,24 @@ const api = async (path, { method = 'GET', body, token, cookie } = {}) => {
   });
   check('participant can submit a photo', withPhoto.status === 201 && withPhoto.data.photo.startsWith('data:image/'));
 
+  // ---- admin-editable submit form ----
+  const formSave = await api('/api/settings', { method: 'PUT', token, body: { form: {
+    links: { name: { label: 'Team', required: false }, game: { label: 'Project', required: true },
+             link: { label: 'URL', required: false }, photo: { label: 'Cover', required: true } }
+  } } });
+  const lf = formSave.data.form && formSave.data.form.links;
+  check('form labels and required flags save', lf && lf.name.label === 'Team' && !lf.link.required && lf.photo.required);
+  check('blank form keeps default labels', formSave.data.form.pictures.photo.label === 'Photo');
+  await api('/api/settings', { method: 'PUT', body: { mode: 'links' }, token });
+  const phone3 = crypto.randomUUID();
+  const noCover = await api('/api/submit', { method: 'POST', body: { game: 'P', deviceId: phone3 }, cookie: phone3 });
+  check('required photo enforced, named by its label', noCover.status === 400 && noCover.data.error === 'Cover is required.', noCover.data.error);
+  const optional = await api('/api/submit', {
+    method: 'POST', body: { game: 'P', photo: 'data:image/png;base64,iVBORw0KGgo=', deviceId: phone3 }, cookie: phone3
+  });
+  check('unticked name and link may be left empty', optional.status === 201 && optional.data.name === 'Anonymous', JSON.stringify(optional.data.error));
+  await api('/api/settings', { method: 'PUT', token, body: { form: {}, mode: 'pictures' } });
+
   check('admin routes need a token', (await api('/api/admin/state')).status === 401);
   check('public scoreboard needs no token', (await api('/api/results')).status === 200);
 
