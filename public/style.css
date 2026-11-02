@@ -42,6 +42,10 @@ button {
   cursor: pointer;
   font-weight: 600;
 }
+a.btn {
+  display: inline-block; padding: 9px 16px; border-radius: 9px; background: var(--accent);
+  color: #fff; font-weight: 600; text-decoration: none;
+}
 button.ghost { background: transparent; border-color: var(--line); color: var(--text); font-weight: 500; }
 button.danger { background: var(--danger); }
 button:disabled { opacity: .45; cursor: not-allowed; }

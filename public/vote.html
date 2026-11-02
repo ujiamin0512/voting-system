@@ -45,7 +45,7 @@ async function load() {
   // Reload only when the voter has not started choosing, so a refresh never
   // discards selections they are part-way through making.
   if (buildWatch.changed(data.build) && !picked.size) return buildWatch.reload();
-  const { settings, candidates, deviceId: did, alreadyVoted } = data;
+  const { settings, candidates, deviceId: did, alreadyVoted, mine } = data;
   deviceId = did;
   if (did && !store.get()) store.set(did);
   need = settings.votesPerVoter;
@@ -60,21 +60,29 @@ async function load() {
     if (alreadyVoted) return done('🔒', 'Already voted', 'This device has already submitted a ballot.');
   }
 
-  if (!settings.open && !PREVIEW) {
-    $('#rule').innerHTML = '<b class="err">Voting is currently closed.</b>';
-    $('#submit').remove();
-    return;
-  }
-  $('#rule').textContent = `Select exactly ${need} ${need === 1 ? 'choice' : 'choices'}, then submit.`;
-
   const links = settings.mode === 'links';
-  if (links) $('#rule').insertAdjacentHTML('afterend',
-    '<p class="muted" style="margin-top:-8px">🎮 Game library — tap ▶ Play to try a game, tap the card to pick it. Submitted one? <a href="/submit" style="color:var(--accent)">Edit it</a>.</p>');
+  // Before voting opens the library is browse-only: everyone can look around and
+  // play, but cards can't be picked and the bottom bar offers submitting instead.
+  const browse = !settings.open && !PREVIEW;
+  if (browse) {
+    $('#rule').innerHTML = `<b style="color:#f5b74a">Voting hasn't opened yet.</b> Explore ${links ? 'and play the games' : 'the entries'} — you can vote once the host opens it.`;
+    $('#counter').textContent = 'Browse only';
+    if (settings.submissionsOpen) {
+      const a = document.createElement('a');
+      a.href = '/submit'; a.className = 'btn';
+      a.textContent = mine ? 'Edit my entry' : (links ? 'Submit your game' : 'Submit your photo');
+      $('#submit').replaceWith(a);
+    } else $('#submit').remove();
+  } else {
+    $('#rule').textContent = `Select exactly ${need} ${need === 1 ? 'choice' : 'choices'}, then submit.`;
+    if (links) $('#rule').insertAdjacentHTML('afterend',
+      '<p class="muted" style="margin-top:-8px">🎮 Game library — tap ▶ Play to try a game, tap the card to pick it. Submitted one? <a href="/submit" style="color:var(--accent)">Edit it</a>.</p>');
+  }
 
   $('#grid').innerHTML = '';
   candidates.forEach(c => {
     const el = document.createElement('div');
-    el.className = 'cand pick';
+    el.className = browse ? 'cand' : 'cand pick';
     if (links) {
       // Game name is the headline, the creator underneath, and a Play link that
       // opens the game without toggling the selection.
@@ -90,7 +98,7 @@ async function load() {
                      `<div class="body"><b></b></div>`;
       el.querySelector('b').textContent = c.name;
     }
-    el.onclick = () => {
+    if (!browse) el.onclick = () => {
       if (picked.has(c.id)) picked.delete(c.id);
       else if (picked.size >= need) return flash(`You can only pick ${need}. Tap a selected one to remove it.`);
       else picked.add(c.id);
@@ -99,7 +107,8 @@ async function load() {
     };
     $('#grid').append(el);
   });
-  sync();
+  if (!candidates.length) $('#grid').innerHTML = '<p class="muted">Nothing here yet — be the first to submit.</p>';
+  if (!browse) sync();
 }
 
 function sync() {

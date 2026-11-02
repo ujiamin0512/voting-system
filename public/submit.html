@@ -9,9 +9,105 @@
   .form label[hidden] { display: none; }
   .form input { width: 100%; }
   .preview { width: 100%; max-width: 460px; aspect-ratio: 16/9; object-fit: cover; border-radius: 12px; background: #0b0d13; display: none; }
-  .qr { background: #fff; padding: 14px; border-radius: 12px; display: inline-grid; place-items: center; margin: 12px auto; }
-  .qr img, .qr canvas { width: 220px !important; height: 220px !important; }
+
+  /* ---- "You're in" confirmation screen ---- */
+  .done {
+    --ease: cubic-bezier(.32,.72,0,1);
+    --hair: rgba(255,255,255,.08);
+    min-height: 100dvh; background: #050507; color: #f4f5f8; overflow-x: hidden; position: relative;
+    font-family: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  /* Two soft orbs behind everything; fixed so they never repaint on scroll. */
+  .done::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(40rem 30rem at 85% -10%, rgba(91,140,255,.22), transparent 60%),
+      radial-gradient(34rem 28rem at -10% 110%, rgba(34,197,94,.14), transparent 60%);
+  }
+  .done .stage {
+    position: relative; max-width: 1040px; margin: 0 auto; padding: 96px 32px 120px;
+    display: grid; grid-template-columns: 1.05fr .95fr; gap: 72px; align-items: center;
+  }
+  .done .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px; border-radius: 99px; padding: 6px 12px;
+    background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px var(--hair);
+    font-size: 10px; letter-spacing: .22em; text-transform: uppercase; font-weight: 500; color: #b9c0d0;
+  }
+  .done .eyebrow i { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 12px #22c55e; }
+  .done h1 {
+    font-size: clamp(52px, 8vw, 104px); line-height: .92; letter-spacing: -.045em; font-weight: 600;
+    margin: 26px 0 22px;
+  }
+  .done h1 em { font-style: normal; color: #7d8496; }
+  .done .lede { font-size: 17px; line-height: 1.6; color: #9aa2b5; max-width: 30ch; margin: 0 0 40px; }
+  .done .lede b { color: #f4f5f8; font-weight: 500; }
+
+  /* Status capsule: voting open vs. not yet open. */
+  .done .status {
+    display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; border-radius: 20px; max-width: 420px;
+    background: rgba(255,255,255,.025); box-shadow: inset 0 0 0 1px var(--hair); margin-bottom: 36px;
+  }
+  .done .status .dot { flex: none; margin-top: 7px; width: 8px; height: 8px; border-radius: 50%; background: #f5b74a; box-shadow: 0 0 14px #f5b74a; }
+  .done .status.live .dot { background: #22c55e; box-shadow: 0 0 14px #22c55e; }
+  .done .status b { display: block; font-weight: 500; font-size: 15px; }
+  .done .status span { color: #8a91a3; font-size: 14px; }
+
+  .done .ctas { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .done .pill {
+    display: inline-flex; align-items: center; gap: 14px; padding: 8px 8px 8px 24px; border-radius: 99px;
+    text-decoration: none; font-weight: 500; font-size: 15px; color: #050507; background: #f4f5f8;
+    transition: transform .6s var(--ease), background .6s var(--ease);
+  }
+  .done .pill:active { transform: scale(.98); }
+  .done .pill .ic {
+    width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(5,5,7,.08); transition: transform .6s var(--ease);
+  }
+  .done .pill:hover .ic { transform: translate(3px,-1px) scale(1.06); }
+  .done .pill.ghost { color: #f4f5f8; background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px var(--hair); }
+  .done .pill.ghost .ic { background: rgba(255,255,255,.08); }
+  .done .pill.ghost:hover { background: rgba(255,255,255,.08); }
+  .done .quiet { margin-top: 28px; font-size: 14px; color: #6f7687; }
+  .done .quiet a { color: #b9c0d0; text-decoration: none; box-shadow: 0 1px 0 rgba(185,192,208,.3); }
+  .done svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 1.4; fill: none; }
+
+  /* The entry itself: a machined double-bezel card, tilted a touch. */
+  .done .shell {
+    padding: 8px; border-radius: 36px; background: rgba(255,255,255,.03);
+    box-shadow: inset 0 0 0 1px var(--hair), 0 40px 120px -40px rgba(91,140,255,.35);
+    transform: rotate(2deg); transition: transform 1s var(--ease);
+  }
+  .done .shell:hover { transform: rotate(0deg) translateY(-4px); }
+  .done .core {
+    border-radius: 28px; overflow: hidden; background: linear-gradient(180deg,#12141c,#0b0c12);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,.12);
+  }
+  .done .core .cover { border-radius: 0; box-shadow: none; font-size: 14px; }
+  .done .core .cover.gen .big, .done .core .cover .cap { display: none; } /* title is in .meta below */
+  .done .core .shot { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+  .done .meta { padding: 22px 24px 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .done .meta .t { font-size: 22px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; overflow-wrap: anywhere; }
+  .done .meta .by { color: #7d8496; font-size: 14px; margin-top: 2px; }
+  .done .meta .pill { flex: none; padding: 6px 6px 6px 18px; font-size: 14px; }
+  .done .meta .pill .ic { width: 30px; height: 30px; }
+
+  /* Entry choreography: heavy fade-up, staggered. */
+  .done .rise { opacity: 0; transform: translateY(40px); filter: blur(8px); animation: rise 1s var(--ease) forwards; }
+  .done .rise.d1 { animation-delay: .08s } .done .rise.d2 { animation-delay: .16s }
+  .done .rise.d3 { animation-delay: .24s } .done .rise.d4 { animation-delay: .32s } .done .rise.d5 { animation-delay: .4s }
+  @keyframes rise { to { opacity: 1; transform: none; filter: blur(0); } }
+  @media (prefers-reduced-motion: reduce) { .done .rise { animation: none; opacity: 1; transform: none; filter: none; } }
+
+  @media (max-width: 767px) {
+    .done .stage { grid-template-columns: 1fr; gap: 48px; padding: 56px 16px 80px; }
+    .done .art { order: -1; }
+    .done .shell, .done .shell:hover { transform: none; }
+    .done .lede { max-width: none; }
+    .done .ctas .pill { flex: 1 1 100%; justify-content: space-between; }
+  }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap">
 
 <div class="wrap">
   <h1 id="title">Loading…</h1>
@@ -30,10 +126,10 @@
 
 <script src="/version.js"></script>
 <script src="/img.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/cover.js"></script>
 <script>
 const $ = s => document.querySelector(s);
-let mode = 'pictures', deviceId = '', mine = null, photo = '';
+let mode = 'pictures', deviceId = '', mine = null, photo = '', votingOpen = false;
 
 // Same device id the vote page uses, so "one entry per device" and "one vote per
 // device" refer to the same phone.
@@ -42,16 +138,50 @@ const store = {
   set: v => { try { localStorage.setItem('vdid', v); } catch {} }
 };
 
-const done = (icon, head, sub, extra = '') => {
-  document.body.innerHTML =
-    `<div class="wrap" style="text-align:center;padding-top:60px">
-       <div style="font-size:64px">${icon}</div>
-       <h1>${head}</h1>
-       ${extra}
-       <p class="muted">${sub}</p>
-     </div>`;
-};
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const ARROW = '<svg viewBox="0 0 16 16"><path d="M4.5 11.5l7-7M5.5 4.5h6v6"/></svg>';
+const PLAY = '<svg viewBox="0 0 16 16"><path d="M5 3.5v9l7.5-4.5z"/></svg>';
+
+// Confirmation screen. No QR here: everyone reaches the game from the library on /vote.
+function done(d, updated) {
+  const links = mode === 'links';
+  const title = links ? (d.game || d.name) : d.name;
+  const art = links
+    ? coverTile(d)
+    : (d.photo ? `<img class="shot" src="${esc(d.photo)}" alt="">` : '');
+  const play = links && d.link
+    ? `<a class="pill" href="${esc(d.link)}" target="_blank" rel="noopener">Play<span class="ic">${PLAY}</span></a>` : '';
+  const status = votingOpen
+    ? `<div class="status live rise d3"><i class="dot"></i><div><b>Voting is open</b>
+         <span>Go pick your favourites before it closes.</span></div></div>`
+    : `<div class="status rise d3"><i class="dot"></i><div><b>Voting hasn't opened yet</b>
+         <span>Explore and play the other ${links ? 'games' : 'entries'} meanwhile. Voting unlocks when the host opens it.</span></div></div>`;
+  document.body.className = 'done';
+  document.body.innerHTML =
+    `<main class="stage">
+       <section>
+         <span class="eyebrow rise"><i></i>${updated ? 'Entry updated' : 'Entry received'}</span>
+         <h1 class="rise d1">You're in.<br><em>On the board.</em></h1>
+         <p class="lede rise d2"><b>${esc(title)}</b>${links ? ` by ${esc(d.name)}` : ''} is now live in the library for everyone to see.</p>
+         ${status}
+         <div class="ctas rise d4">
+           <a class="pill" href="/vote">${votingOpen ? 'Explore &amp; vote' : 'Explore ' + (links ? 'games' : 'entries')}<span class="ic">${ARROW}</span></a>
+           <a class="pill ghost" href="/projector">Projector<span class="ic">${ARROW}</span></a>
+         </div>
+         <p class="quiet rise d5">Need to fix something? <a href="/submit">Edit my entry</a></p>
+       </section>
+       <aside class="art rise d2">
+         <div class="shell"><div class="core">
+           ${art}
+           <div class="meta">
+             <div><div class="t">${esc(title)}</div>${links ? `<div class="by">by ${esc(d.name)}</div>` : ''}</div>
+             ${play}
+           </div>
+         </div></div>
+       </aside>
+     </main>`;
+  scrollTo(0, 0);
+}
 
 async function load() {
   const r = await fetch('/api/poll?did=' + encodeURIComponent(store.get()), { cache: 'no-store' });
@@ -62,11 +192,12 @@ async function load() {
   if (did && !store.get()) store.set(did);
   mode = settings.mode;
   mine = data.mine;
+  votingOpen = settings.open;
   document.title = 'Submit — ' + settings.title;
   $('#title').textContent = settings.title;
 
   if (!settings.submissionsOpen) {
-    $('#rule').innerHTML = '<b class="err">Submissions are closed.</b>';
+    $('#rule').innerHTML = '<b class="err">Submissions are closed.</b> <a href="/vote" style="color:var(--accent)">Explore the entries →</a>';
     return;
   }
   const links = mode === 'links';
@@ -111,18 +242,7 @@ $('#form').onsubmit = async e => {
   const d = await r.json();
   if (!r.ok) { $('#msg').textContent = d.error; $('#submit').disabled = false; return; }
   store.set(store.get() || deviceId);
-
-  const nav = `<p><a href="/vote" style="color:var(--accent)">Vote →</a> &nbsp;·&nbsp;
-               <a href="/projector" style="color:var(--accent)">See the projector →</a></p>`;
-  if (mode === 'links') {
-    done('🎮', 'You\'re in!', `<b>${esc(d.game)}</b> by ${esc(d.name)} is on the board.<br>This is the QR code others will scan to play.${nav}`,
-      '<div class="qr" id="qr"></div>');
-    if (window.QRCode) new QRCode($('#qr'), { text: d.link, width: 220, height: 220 });
-    else $('#qr').textContent = d.link;
-  } else {
-    done('📸', 'You\'re in!', `<b>${esc(d.name)}</b> is on the board.${nav}`,
-      `<img src="${d.photo}" alt="" style="width:220px;height:220px;object-fit:cover;border-radius:12px">`);
-  }
+  done(d, r.status === 200);
 };
 
 load();
