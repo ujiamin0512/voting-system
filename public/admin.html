@@ -55,6 +55,8 @@
         </select>
       </label>
       <label class="row" style="gap:6px"><input id="sSubs" type="checkbox"> Submissions open</label>
+      <button id="saveSet">Save</button>
+      <span id="setMsg" class="ok"></span>
     </div>
 
     <h2>Add candidate</h2>
@@ -76,13 +78,8 @@
       <div class="row" style="margin-top:14px">
         <button class="ghost" id="unlockBtn">Clear device locks</button>
         <button class="danger" id="resetBtn">Reset all votes</button>
+        <button class="danger" id="clearSubsBtn">Delete all submissions</button>
       </div>
-    </div>
-
-    <!-- Poll settings save: pinned to the bottom so it is always in reach. -->
-    <div class="sticky row" id="saveBar" style="justify-content:space-between">
-      <span id="setMsg" class="muted">Poll settings are saved.</span>
-      <button id="saveSet" style="padding:12px 28px;font-size:16px">Save settings</button>
     </div>
   </section>
 </div>
@@ -115,7 +112,7 @@
 <script>
 const $ = s => document.querySelector(s);
 let token = localStorage.getItem('vtoken') || '';
-let voteUrl = '', submitUrl = '', mode = 'pictures';
+let voteUrl = '', submitUrl = '', mode = 'pictures', candidates = [];
 
 const api = async (path, opts = {}) => {
   const r = await fetch(path, {
@@ -171,6 +168,10 @@ async function load() {
       '<b>Storage → Create Database → Neon → Connect</b>, then <b>Deployments → Redeploy</b>. ' +
       'Diagnostics: <a href="/api/health" target="_blank" style="color:#ffc9c9">/api/health</a>';
   }
+  candidates = s.candidates;
+  const subs = candidates.filter(c => c.submitted).length;
+  $('#clearSubsBtn').textContent = `Delete all submissions (${subs})`;
+  $('#clearSubsBtn').disabled = !subs;
   $('#rows').innerHTML = '';
   s.candidates.forEach(c => $('#rows').append(rowFor(c)));
 }
@@ -243,20 +244,10 @@ $('#saveSet').onclick = async () => {
       open: $('#sOpen').checked, oneVotePerDevice: $('#sLock').checked,
       mode: $('#sMode').value, submissionsOpen: $('#sSubs').checked
     })});
-    setDirty(false, '✓ Saved');
+    $('#setMsg').textContent = 'Saved'; setTimeout(() => $('#setMsg').textContent = '', 1500);
     load();
   } catch (e) { alert(e.message); }
 };
-
-// Editing any poll setting flags the bar until it is saved.
-function setDirty(dirty, msg) {
-  $('#setMsg').textContent = msg || (dirty ? '● Unsaved changes to poll settings' : 'Poll settings are saved.');
-  $('#setMsg').className = dirty ? 'err' : (msg ? 'ok' : 'muted');
-}
-['#sTitle', '#sVotes', '#sOpen', '#sLock', '#sMode', '#sSubs'].forEach(id => {
-  $(id).addEventListener('input', () => setDirty(true));
-  $(id).addEventListener('change', () => setDirty(true));
-});
 
 $('#addBtn').onclick = async () => {
   $('#addMsg').textContent = '';
@@ -273,6 +264,18 @@ $('#addBtn').onclick = async () => {
 $('#resetBtn').onclick = async () => {
   if (!confirm('Reset every candidate to 0 votes and clear all ballots?')) return;
   await api('/api/reset', { method: 'POST' });
+  load();
+};
+
+// Removes every entry that came in from a phone (the 📱 ones). Candidates the admin
+// added by hand stay. Each phone can then submit a fresh entry.
+$('#clearSubsBtn').onclick = async () => {
+  const subs = candidates.filter(c => c.submitted);
+  if (!subs.length) return;
+  if (!confirm(`Delete all ${subs.length} submitted ${subs.length === 1 ? 'entry' : 'entries'} (📱) and their votes? This cannot be undone.`)) return;
+  try {
+    for (const c of subs) await api('/api/candidates/' + c.id, { method: 'DELETE' });
+  } catch (e) { alert(e.message); }
   load();
 };
 
