@@ -55,8 +55,6 @@
         </select>
       </label>
       <label class="row" style="gap:6px"><input id="sSubs" type="checkbox"> Submissions open</label>
-      <button id="saveSet">Save</button>
-      <span id="setMsg" class="ok"></span>
     </div>
 
     <h2>Add candidate</h2>
@@ -79,6 +77,12 @@
         <button class="ghost" id="unlockBtn">Clear device locks</button>
         <button class="danger" id="resetBtn">Reset all votes</button>
       </div>
+    </div>
+
+    <!-- Poll settings save: pinned to the bottom so it is always in reach. -->
+    <div class="sticky row" id="saveBar" style="justify-content:space-between">
+      <span id="setMsg" class="muted">Poll settings are saved.</span>
+      <button id="saveSet" style="padding:12px 28px;font-size:16px">Save settings</button>
     </div>
   </section>
 </div>
@@ -239,10 +243,20 @@ $('#saveSet').onclick = async () => {
       open: $('#sOpen').checked, oneVotePerDevice: $('#sLock').checked,
       mode: $('#sMode').value, submissionsOpen: $('#sSubs').checked
     })});
-    $('#setMsg').textContent = 'Saved'; setTimeout(() => $('#setMsg').textContent = '', 1500);
+    setDirty(false, '✓ Saved');
     load();
   } catch (e) { alert(e.message); }
 };
+
+// Editing any poll setting flags the bar until it is saved.
+function setDirty(dirty, msg) {
+  $('#setMsg').textContent = msg || (dirty ? '● Unsaved changes to poll settings' : 'Poll settings are saved.');
+  $('#setMsg').className = dirty ? 'err' : (msg ? 'ok' : 'muted');
+}
+['#sTitle', '#sVotes', '#sOpen', '#sLock', '#sMode', '#sSubs'].forEach(id => {
+  $(id).addEventListener('input', () => setDirty(true));
+  $(id).addEventListener('change', () => setDirty(true));
+});
 
 $('#addBtn').onclick = async () => {
   $('#addMsg').textContent = '';
